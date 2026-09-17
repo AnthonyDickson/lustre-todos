@@ -1,6 +1,12 @@
 namespace LustreTodos.Todos
 
 open System
+open System.ComponentModel.DataAnnotations
+
+/// <summary>Limits shared by the Todo validation rules and their OpenAPI schema annotations.</summary>
+module TodoLimits =
+    [<Literal>]
+    let internal MaxTitleLength = 256
 
 /// <summary>A todo item stored in the database.</summary>
 type Todo = {
@@ -8,6 +14,8 @@ type Todo = {
     Id : Guid
 
     /// <summary>The title or description of the todo.</summary>
+    [<MinLength(1)>]
+    [<MaxLength(TodoLimits.MaxTitleLength)>]
     Title : string
 
     /// <summary>Whether the todo has been completed.</summary>
@@ -36,13 +44,18 @@ module Todo =
     }
 
 /// <summary>Payload for updating an existing todo item.</summary>
-type UpdateTodoRequest = { Title : string; Completed : bool }
+type UpdateTodoRequest = {
+    /// <summary>The new title for the todo.</summary>
+    [<MinLength(1)>]
+    [<MaxLength(TodoLimits.MaxTitleLength)>]
+    Title : string
+
+    /// <summary>Whether the todo is now completed.</summary>
+    Completed : bool
+}
 
 module Validation =
     open LustreTodos.DomainError
-
-    [<Literal>]
-    let private MaxTodoTitleLength = 256
 
     let private nonEmpty (title : string) =
         if String.IsNullOrWhiteSpace title then
@@ -51,11 +64,11 @@ module Validation =
             Ok title
 
     let private acceptableLength (title : string) =
-        if title.Length > MaxTodoTitleLength then
+        if title.Length > TodoLimits.MaxTitleLength then
             Error (
                 ValidationFailed
                     $"Title is too long. Titles must be at most \
-                    %i{MaxTodoTitleLength} characters, but got %i{title.Length}"
+                    %i{TodoLimits.MaxTitleLength} characters, but got %i{title.Length}"
             )
         else
             Ok title
