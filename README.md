@@ -71,6 +71,7 @@ Management — versions in `Directory.Packages.props`.
 - [Database](docs/database.md)
 - [Deployment](docs/deployment.md)
 - [JSON Serialization](docs/json-serialization.md)
+- [OpenAPI Schemas](docs/openapi.md)
 - [Production OIDC Setup](docs/prod-oidc-setup.md)
 - [Server Tests](docs/server-tests.md)
 - [E2E Tests](docs/e2e-tests.md)

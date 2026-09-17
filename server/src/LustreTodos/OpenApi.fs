@@ -1,5 +1,69 @@
 namespace LustreTodos.OpenApi
 
+open System
+
+/// <summary>
+/// Declarative hints describing how a refined or constrained value is represented on the wire.
+/// A hint is applied to an OpenAPI schema by <see cref="OpenApi.SchemaHintTransformer"/>; the
+/// annotated field stays a primitive, so decoding is unaffected.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Prefer the native <c>System.ComponentModel.DataAnnotations</c> attributes wherever they express
+/// the constraint: ASP.NET Core maps them onto JSON Schema keywords for free. Avoid
+/// <c>[&lt;Required&gt;]</c> on F# records - see <see cref="OpenApi.FSharpRecordSchemaTransformer"/>.
+/// </para>
+/// <para>
+/// Use <see cref="SchemaHint.EnumAttribute"/> to document a string enum derived from an F# union's
+/// cases, and <see cref="SchemaHint.NumberAttribute"/> for a minimum-only boundary or
+/// <c>multipleOf</c> that <c>[&lt;Range&gt;]</c> cannot express. Hints document only; they do not
+/// validate, so keep them in step with the domain invariants.
+/// </para>
+/// <para>
+/// See <c>docs/openapi.md</c> for the native attribute reference, the full guidance, and future
+/// migrations (e.g. the F# union transformer in Oxpecker.OpenApi PR #98) and alternatives.
+/// </para>
+/// </remarks>
+module SchemaHint =
+    /// <summary>
+    /// Documents a string property as an enum, deriving the accepted values from the cases of an
+    /// F# discriminated union, e.g. <c>SchemaHint.Enum(typeof&lt;MyUnion&gt;)</c>.
+    /// </summary>
+    /// <remarks>
+    /// The emitted values are the union case names, so they must match the wire strings. If a case
+    /// name ever diverges from its wire value, either reflect a dedicated union whose names match or
+    /// fall back to <c>[&lt;RegularExpression&gt;]</c>.
+    /// </remarks>
+    [<AttributeUsage(AttributeTargets.Class
+                     ||| AttributeTargets.Struct
+                     ||| AttributeTargets.Property
+                     ||| AttributeTargets.Field)>]
+    type EnumAttribute (unionType : Type) =
+        inherit Attribute ()
+
+        member _.UnionType = unionType
+
+    /// <summary>
+    /// Constrains a numeric property, e.g. a positive magnitude with
+    /// <c>SchemaHint.Number (Minimum = "0", MultipleOf = 0.01)</c>.
+    /// </summary>
+    /// <remarks>
+    /// Use this only where <c>[&lt;Range(min, max)&gt;]</c> is not enough: it requires both bounds,
+    /// so it cannot express a minimum-only constraint on a positive magnitude. Bounds are JSON
+    /// Schema keywords carried as strings because <c>OpenApiSchema.Minimum</c> and
+    /// <c>OpenApiSchema.Maximum</c> are strings; leave a bound blank to omit it.
+    /// </remarks>
+    [<AttributeUsage(AttributeTargets.Class
+                     ||| AttributeTargets.Struct
+                     ||| AttributeTargets.Property
+                     ||| AttributeTargets.Field)>]
+    type NumberAttribute () =
+        inherit Attribute ()
+
+        member val Minimum = "" with get, set
+        member val Maximum = "" with get, set
+        member val MultipleOf = 0.0 with get, set
+
 module OpenApi =
     open Microsoft.AspNetCore.OpenApi
     open Microsoft.FSharp.Reflection
@@ -140,5 +204,62 @@ module OpenApi =
                             if not (isNull schema.Properties) && schema.Properties.ContainsKey jsonName then
                                 schema.Properties[jsonName].Description <- summary
                         | None -> ()
+
+                Task.CompletedTask
+
+    /// <summary>
+    /// Applies <see cref="SchemaHint"/> attributes to generated schemas, so refined values are
+    /// documented as their wire representation: an enum derived from a union's cases, or a
+    /// constrained number.
+    /// </summary>
+    type SchemaHintTransformer () =
+        interface IOpenApiSchemaTransformer with
+            member _.TransformAsync (schema, context, _cancellationToken : CancellationToken) =
+                let apply (provider : ICustomAttributeProvider) =
+                    for attribute in provider.GetCustomAttributes (typeof<SchemaHint.EnumAttribute>, false) do
+                        let hint = attribute :?> SchemaHint.EnumAttribute
+
+                        schema.Type <- Nullable JsonSchemaType.String
+
+                        schema.Enum <-
+                            ResizeArray<JsonNode> [
+                                for case in FSharpType.GetUnionCases hint.UnionType ->
+                                    JsonValue.Create case.Name :> JsonNode
+                            ]
+
+                    for attribute in provider.GetCustomAttributes (typeof<SchemaHint.NumberAttribute>, false) do
+                        let hint = attribute :?> SchemaHint.NumberAttribute
+
+                        schema.Type <- Nullable JsonSchemaType.Number
+                        schema.Format <- null
+                        schema.Pattern <- null
+
+                        if not (String.IsNullOrEmpty hint.Minimum) then
+                            schema.Minimum <- hint.Minimum
+
+                        if not (String.IsNullOrEmpty hint.Maximum) then
+                            schema.Maximum <- hint.Maximum
+
+                        if hint.MultipleOf > 0.0 then
+                            schema.MultipleOf <- Nullable (decimal hint.MultipleOf)
+
+                if not (isNull context.JsonPropertyInfo) then
+                    apply context.JsonPropertyInfo.AttributeProvider
+
+                apply context.JsonTypeInfo.Type
+
+                Task.CompletedTask
+
+    /// <summary>
+    /// Documents <c>decimal</c> as a plain JSON number. System.Text.Json otherwise infers a
+    /// <c>number</c>-or-<c>string</c> union with a <c>double</c> format and a numeric-string pattern.
+    /// </summary>
+    type DecimalSchemaTransformer () =
+        interface IOpenApiSchemaTransformer with
+            member _.TransformAsync (schema, context, _cancellationToken : CancellationToken) =
+                if context.JsonTypeInfo.Type = typeof<decimal> then
+                    schema.Type <- Nullable JsonSchemaType.Number
+                    schema.Format <- null
+                    schema.Pattern <- null
 
                 Task.CompletedTask

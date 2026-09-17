@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-A full-stack web app with an Oxpecker F# .NET 10 backend (SQLite + OIDC auth + OpenAPI) and a Gleam/Lustre SPA frontend styled with Tailwind CSS v4 and bundled with Vite.
+A full-stack web app with an Oxpecker F# .NET 10 backend (SQLite + OIDC auth + OpenAPI) and a Gleam/Lustre SPA frontend styled with Tailwind CSS v4 and bundled with Vite. OpenAPI schema conventions (annotating types and fields) live in [docs/openapi.md](docs/openapi.md).
 
 This repo is a template — the example domain is a todo app, but the architecture patterns are domain-agnostic. Run `scripts/rename.sh` to adopt it for your own project.
 
@@ -70,7 +70,7 @@ server/
       Coders.fs                       # Generic JSON encode/decode
       Config.fs                       # OIDC/OAuth2 configuration
       Auth.fs                         # OIDC auth setup (cookie + JWT bearer)
-      OpenApi.fs                      # FSharpRecordSchemaTransformer
+      OpenApi.fs                      # Schema transformers (record, date, XML doc, hints)
       Json.fs                         # JSON read/write helpers
       Db.fs                           # SqlHydra-generated types + QueryContextFactory
       Todos.fs                        # Store, handlers, routes (vertical slice — example domain)
@@ -136,6 +136,10 @@ let handler (store : Store) (id : Guid) : EndpointHandler = ...
 ```
 
 Each `endpoint` function wraps the handler with OpenAPI metadata via `addOpenApi`. Routes use `/api/<resource>` prefix for collection endpoints and `/api/<resource>/{id}` for item endpoints.
+
+#### OpenAPI schema annotations
+
+Types and fields are annotated for the published document in `OpenApi.fs`. Prefer native `System.ComponentModel.DataAnnotations` attributes, which ASP.NET Core maps onto JSON Schema keywords; fall back to the `SchemaHint` attributes only where they cannot express the constraint (string enums derived from F# unions, minimum-only or `multipleOf` numeric bounds). The `SchemaHintTransformer` and `DecimalSchemaTransformer` are registered in `addOpenApiToBuilder` (`Program.fs`). See [docs/openapi.md](docs/openapi.md) for the full reference and wiring order.
 
 ### Database (`Db.fs` + `migrations/`)
 
