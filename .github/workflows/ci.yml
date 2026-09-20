@@ -18,7 +18,7 @@ jobs:
           cache: true
           cache-dependency-path: server/Directory.Packages.props
 
-      - run: dotnet run --project server/tests/LustreTodos.Tests
+      - run: dotnet test server/LustreTodos.slnx
 
       - if: failure()
         run: |

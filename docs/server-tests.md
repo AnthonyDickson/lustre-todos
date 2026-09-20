@@ -32,7 +32,31 @@ all tests. Each test calls `app.CleanDatabase()` before acting.
 ```bash
 just server-test
 # or
-dotnet run --project server/tests/__PROJECT_NAME__.Server.Tests
+dotnet test server/__PROJECT_NAME__.slnx
+```
+
+This is the only way to run them, locally and in CI, and it is the same mechanism IDE test explorers use.
+`YoloDev.Expecto.TestSdk` bridges Expecto to VSTest; it discovers tests by reflecting over `[<Tests>]`-attributed values
+in the built assembly, so every test list must carry `[<Tests>]`. There is no explicit test program:
+`Microsoft.NET.Test.Sdk` sets `OutputType` to `Exe` and adds its own generated entry point, which must not be disabled
+(see below).
+
+Useful options:
+
+```bash
+dotnet test server/__PROJECT_NAME__.slnx --list-tests
+dotnet test server/__PROJECT_NAME__.slnx --filter "FullyQualifiedName~Todo"
+dotnet test server/__PROJECT_NAME__.slnx -- Expecto.parallel=false   # Expecto settings, `Expecto.`-prefixed
+```
+
+### Don't set `GenerateProgramFile` to `false`
+
+`Microsoft.NET.Test.Sdk` sets `OutputType=Exe` and, unless the project declares its own `Program.fs`, adds a generated
+entry point. Suppressing that entry point leaves the F# assembly without one, and Expecto's discovery then reads every
+`[<Tests>]` value as `null`, failing the run with:
+
+```
+Test is null. Assembly may not be initialized. Consider adding an [<EntryPoint>] or making it a library/classlib.
 ```
 
 ## Test Cases

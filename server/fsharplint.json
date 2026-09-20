@@ -2,7 +2,8 @@
   "ignoreFiles": [
     "src/LustreTodos/Db.fs",
     "src/*/obj/*/*/*/*",
-    "tests/*/obj/*/*/*"
+    "tests/*/obj/*/*/*",
+    "Microsoft.NET.Test.Sdk.Program.fs"
   ],
   "global": {
     "numIndentationSpaces": 4

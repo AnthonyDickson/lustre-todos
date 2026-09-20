@@ -11,7 +11,7 @@ This repo is a template — the example domain is a todo app, but the architectu
 ```bash
 just server-build    # Build the server
 just server-watch    # Run the server (auto-applies DB migrations)
-just server-test     # Server xUnit tests
+just server-test     # Server Expecto tests (via the test adapter)
 just client-install-deps  # npm install
 just client-watch    # Start the client dev server (Vite + Gleam watch)
 just client-build    # Production client bundle
@@ -226,7 +226,7 @@ fn update_with_effect(model, msg) -> #(Model, lustre_effect.Effect(Msg)) {
 
 ### Tests
 
-Three layers: server xUnit tests (`just server-test`, ephemeral SQLite, no auth), client gleeunit tests (`just client-test`, pure `update` unit tests, no browser), and E2E Playwright tests (`just e2e-test`, full stack in Docker Compose with Authelia). E2E tests use `data-testid` attributes for selectors — add them to feature page views when new interactive elements are introduced.
+Three layers: server Expecto tests through the Expecto test adapter (`just server-test`, i.e. `dotnet test server/__PROJECT_NAME__.slnx`, ephemeral SQLite, no auth), client gleeunit tests (`just client-test`, pure `update` unit tests, no browser), and E2E Playwright tests (`just e2e-test`, full stack in Docker Compose with Authelia). E2E tests use `data-testid` attributes for selectors — add them to feature page views when new interactive elements are introduced.
 
 ### Static Assets
 
