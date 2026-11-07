@@ -50,7 +50,12 @@ FROM debian:stable-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl libicu76 adduser \
     && rm -rf /var/lib/apt/lists/*
 
-RUN adduser --disabled-password --gecos '' appuser
+RUN adduser --disabled-password --gecos '' --uid 1000 appuser
+
+# Mount points for the database and logs. A fresh named volume copies the
+# ownership of the image directory it mounts over, so these must exist and be
+# owned by appuser, or SQLite cannot create the database.
+RUN mkdir -p /data /logs && chown appuser:appuser /data /logs
 
 EXPOSE 5000
 
