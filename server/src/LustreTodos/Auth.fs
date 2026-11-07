@@ -111,7 +111,6 @@ module Auth =
                     options.Scope.Add "openid" |> ignore
                     options.Scope.Add "profile" |> ignore
                     options.Scope.Add "email" |> ignore
-                    options.Scope.Add "offline_access" |> ignore
 
                     if isDevelopment then
                         options.RequireHttpsMetadata <- false

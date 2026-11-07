@@ -58,14 +58,19 @@ Adapt the dev config from `authelia/configuration.yml`:
 
 Two clients are needed:
 
-|                       | SPA                                    | Scalar/API                   |
-| --------------------- | -------------------------------------- | ---------------------------- |
-| **Client type**       | Confidential                           | Public (PKCE)                |
-| **Grant types**       | `authorization_code` + `refresh_token` | `authorization_code`         |
-| **Response types**    | `code`                                 | `code`                       |
-| **Token auth method** | `client_secret_post`                   | `none`                       |
-| **Scopes**            | `openid profile email offline_access`  | `openid profile email`       |
-| **Redirect URIs**     | `https://<domain>/signin-oidc`         | `https://<domain>/scalar/v1` |
+|                       | SPA                            | Scalar/API                   |
+| --------------------- | ------------------------------ | ---------------------------- |
+| **Client type**       | Confidential                   | Public (PKCE)                |
+| **Grant types**       | `authorization_code`           | `authorization_code`         |
+| **Response types**    | `code`                         | `code`                       |
+| **Token auth method** | `client_secret_post`           | `none`                       |
+| **Scopes**            | `openid profile email`         | `openid profile email`       |
+| **Redirect URIs**     | `https://<domain>/signin-oidc` | `https://<domain>/scalar/v1` |
+
+The SPA does not request `offline_access`: its session is a cookie, and an
+expired cookie goes through the OIDC flow again, so it never uses a refresh
+token. Requesting one would also make Authelia ask for consent on every login,
+whatever the client's `consent_mode`.
 
 The SPA redirect URI must match `Oidc__CallbackPath`.
 
