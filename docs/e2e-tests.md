@@ -7,6 +7,10 @@ Playwright tests running the full stack in Docker Compose with host networking
 just e2e-test
 ```
 
+The server container restores packages into the bind-mounted `server/`, with
+the container's package paths, so host builds and `just lint` fail with
+"package was not found" afterwards. Run `just server-restore` to fix them.
+
 ## Setup
 
 ### Global Auth (`global-setup.ts`)

@@ -3,6 +3,11 @@ PUBLISH_DIR := env_var_or_default("PUBLISH_DIR", "server/src/LustreTodos/bin/Rel
 VERSION := env_var_or_default("VERSION", "0.0.0-local")
 GIT_SHA := env_var_or_default("GIT_SHA", "")
 
+# Restore the server's packages. Run it after the E2E stack, whose server container rewrites the restore
+# output under server/ with the container's package paths, so host builds fail until a restore
+server-restore:
+	cd server && dotnet restore
+
 # Build the server
 server-build:
 	dotnet build server/src/LustreTodos/LustreTodos.fsproj

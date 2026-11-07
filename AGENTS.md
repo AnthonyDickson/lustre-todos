@@ -10,6 +10,7 @@ This repo is a template — the example domain is a todo app, but the architectu
 
 ```bash
 just server-build    # Build the server
+just server-restore  # Restore server packages (needed after the E2E stack runs)
 just server-watch    # Run the server (auto-applies DB migrations)
 just server-test     # Server Expecto tests (via the test adapter)
 just client-install-deps  # npm install
