@@ -196,8 +196,8 @@ pub fn init_routing(handler: fn(String) -> msg) -> Effect(msg) {
 }
 
 /// Push a new URL onto the browser's history stack without a full page reload.
-/// Dispatches no message — the subsequent popstate/click handling (set up by
-/// `init_routing`) delivers the new path as a message to `update`:
+/// Dispatches no message itself: the router set up by `init_routing` delivers
+/// the new path to `update` as a message, as for a link click:
 ///
 /// ```gleam
 /// effect.push_url("/active"),
@@ -208,8 +208,8 @@ pub fn push_url(url: String) -> Effect(msg) {
 }
 
 /// Replace the current URL in the browser's history stack without a full page
-/// reload. Dispatches no message — as with `push_url`, `init_routing` delivers
-/// the new path to `update` as a message.
+/// reload. Dispatches no message itself: as with `push_url`, the router set up
+/// by `init_routing` delivers the new path to `update` as a message.
 ///
 /// ```gleam
 /// effect.replace_url("/active"),
