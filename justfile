@@ -89,6 +89,7 @@ update-deps:
 	cd client && gleam deps update
 	cd client && npm update
 	cd server && dotnet package update
+	cd server && dotnet tool update --all
 
 # ── Database ──────────────────────────────────────────────────────────────
 
