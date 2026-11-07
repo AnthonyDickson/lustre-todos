@@ -5,6 +5,7 @@ open System.Net
 open System.Net.Http
 open System.Text
 open Expecto
+open LustreTodos.ApiError
 open LustreTodos.Coders
 open LustreTodos.Todos
 
@@ -128,7 +129,17 @@ module TodosTests =
                     postJson app.Client "/api/todos" { original with Title = "Overwrite" }
                     |> Async.AwaitTask
 
-                Expect.equal response.StatusCode HttpStatusCode.Conflict "status code should be 409"
+                Expect.equal response.StatusCode HttpStatusCode.BadRequest "status code should be 400"
+
+                let! body = response.Content.ReadAsStringAsync () |> Async.AwaitTask
+
+                match Decode.fromString<ApiError> body with
+                | Ok error ->
+                    Expect.equal
+                        error.Details
+                        $"A todo with ID {original.Id} already exists"
+                        "details should name the ID"
+                | Error err -> failtest err
 
                 let! stored = app.Client.GetStringAsync $"/api/todos/{original.Id}" |> Async.AwaitTask
 

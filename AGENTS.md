@@ -74,6 +74,7 @@ server/
       OpenApi.fs                      # Schema transformers (record, date, XML doc, hints)
       Json.fs                         # JSON read/write helpers
       Db.fs                           # SqlHydra-generated types + QueryContextFactory
+      Constraints.fs                  # Explicit checks mirroring DB constraints (requireAll/requireOne)
       Todos.fs                        # Store, handlers, routes (vertical slice — example domain)
       Program.fs                      # Entry point, DbUp, OpenAPI/Scalar config
       migrations/                     # Numbered .sql files applied by DbUp at startup

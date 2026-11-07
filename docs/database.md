@@ -68,6 +68,13 @@ Deletes `app.sqlite3`, re-applies all migrations in order, regenerates `Db.fs`.
   rename) never leaves a half-migrated database. SQLite's schema changes are
   transactional, so no script needs to opt out, and scripts do not begin
   transactions of their own.
+- **Constraints are checked before writes.** `Constraints.requireAll` and
+  `requireOne` run explicit checks that mirror the schema's integrity
+  constraints, so a violation returns a `400` naming the problem rather than
+  the generic `409`, since SQLite does not always report which column a
+  violation came from. `requireAll` collects every failure into one response.
+  The checks must be kept in step with the schema; the `409` remains as a
+  safety net for a request racing a check and its write.
 - **Foreign keys are enforced per connection.** SQLite builds without a default
   silently ignore them, so the server adds `Foreign Keys=True` to the configured
   connection string and every connection enforces them. WAL journal mode is set

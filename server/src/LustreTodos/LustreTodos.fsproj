@@ -23,6 +23,7 @@
     <Compile Include="OpenApi.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="Db.fs" />
+    <Compile Include="Constraints.fs" />
     <Compile Include="Endpoint.fs" />
     <Compile Include="Todos.fs" />
     <Compile Include="Status.fs" />

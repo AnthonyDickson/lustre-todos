@@ -93,6 +93,7 @@ module Api =
 
     open LustreTodos.ApiError
     open LustreTodos.Auth
+    open LustreTodos.Constraints
     open LustreTodos.Db
     open LustreTodos.DomainError
     open LustreTodos.Endpoint
@@ -198,6 +199,25 @@ module Api =
         [<Literal>]
         let Path = "/api/todos"
 
+        /// <summary>Verify that no todo has the given ID (the primary key). The key spans every user, so
+        /// unlike other queries this one does not filter by user: an ID taken by another user would
+        /// otherwise pass the check and fail the insert.</summary>
+        let private requireIdIsAvailable (queryContext : QueryContextFactory) (id : Guid) =
+            task {
+                let! rowCount =
+                    selectTask queryContext {
+                        for t in main.Todos do
+                            where (t.Id = id)
+                            count
+                    }
+
+                return
+                    if rowCount = 0 then
+                        Ok ()
+                    else
+                        Error (ConstraintError $"A todo with ID %O{id} already exists")
+            }
+
         let private insert (queryContext : QueryContextFactory) (todo : Todo) (userId : string) =
             task {
                 let! _ =
@@ -216,6 +236,7 @@ module Api =
                     let! userId = Auth.getUserId ctx
                     let! (todo : Todo) = Json.read ctx
                     let! todo = Validation.validate todo
+                    do! Constraints.requireOne (requireIdIsAvailable queryContext todo.Id)
 
                     let! () = insert queryContext todo userId
                     log.Info ($"Created todo %O{todo.Id}", LogProp.prop "todoId" (todo.Id.ToString ()))
