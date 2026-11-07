@@ -81,7 +81,8 @@ audit:
 
 outdated:
 	cd client && gleam deps outdated
-	cd client && npm outdated
+	# `-` ignores npm's exit code, which is non-zero when packages are outdated, so the next command still runs
+	-cd client && npm outdated
 	cd server && dotnet list package --outdated
 
 update-deps:
