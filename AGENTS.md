@@ -185,7 +185,7 @@ just db-reset                         # delete DB, re-apply all migrations, rege
 The server uses a dual-layer logging system:
 
 1. **Request-scoped buffered logging** (`RequestLogging.fs`): Collects structured log entries during request processing, then emits them as a single JSON array in the response log. This keeps related log entries together rather than interleaved.
-2. **Global Serilog pipeline** (`Serilog.AspNetCore`): Handles startup logs and unhandled exceptions. Console output uses `RenderedCompactJsonFormatter`. File output is opt-in via `Logging__FilePath`.
+2. **Global Serilog pipeline** (`Serilog.AspNetCore`): Handles startup logs and unhandled exceptions. Console output uses `RenderedCompactJsonFormatter`. File output is opt-in via `Logging__FilePath` and rolls at 10 MB, keeping 10 files. `Microsoft.AspNetCore` logs below warning are dropped, since the request log already records every request.
 
 ### Client (Gleam/Lustre SPA)
 
