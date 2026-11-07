@@ -38,24 +38,23 @@ RUN npm ci --prefix client
 COPY ./justfile ./
 COPY ./server ./server
 COPY ./client ./client
-ARG RUNTIME=linux-x64
+ARG RUNTIME=linux-musl-x64
 ARG APP_VERSION=0.0.0-local
 ARG GIT_SHA=""
 RUN RUNTIME=${RUNTIME} PUBLISH_DIR=/publish VERSION=${APP_VERSION} GIT_SHA=${GIT_SHA} just publish
 
 # =====Runtime===== #
 
-FROM debian:stable-slim AS runtime
-
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl libicu76 adduser \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN adduser --disabled-password --gecos '' --uid 1000 appuser
+# Microsoft's Alpine image with only the native dependencies of a
+# self-contained .NET app, which is why the build targets musl
+# (linux-musl-x64). It provides the non-root `app` user (UID 1654), and
+# BusyBox's wget serves the container healthcheck.
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine AS runtime
 
 # Mount points for the database and logs. A fresh named volume copies the
 # ownership of the image directory it mounts over, so these must exist and be
-# owned by appuser, or SQLite cannot create the database.
-RUN mkdir -p /data /logs && chown appuser:appuser /data /logs
+# owned by app, or SQLite cannot create the database.
+RUN mkdir -p /data /logs && chown app:app /data /logs
 
 EXPOSE 5000
 
@@ -64,6 +63,6 @@ COPY --from=build /publish/wwwroot/ /app/wwwroot/
 COPY --from=build /publish/LustreTodos.staticwebassets.endpoints.json /app/
 
 WORKDIR /app
-USER appuser
+USER app
 ENV ASPNETCORE_URLS=http://0.0.0.0:5000
 ENTRYPOINT ["./LustreTodos"]

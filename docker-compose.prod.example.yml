@@ -23,7 +23,8 @@ services:
       - todos-data:/data
       - logs-data:/logs
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:5000/api/status"]
+      # BusyBox wget; 127.0.0.1 because Kestrel listens on IPv4 only.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:5000/api/status"]
       interval: 30s
       timeout: 5s
       retries: 3

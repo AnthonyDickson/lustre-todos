@@ -25,8 +25,15 @@ docker push ghcr.io/your-org/__PROJECT_KEBAB__:latest
 ```
 
 The multi-stage `Dockerfile` installs Node.js and Gleam, builds the client, then
-publishes the server into a `debian:stable-slim` runtime image with only `ca-certificates`,
-`curl`, and `libicu` installed.
+publishes the server for musl (`linux-musl-x64`) into Microsoft's `runtime-deps`
+Alpine image, which holds only the native libraries a self-contained .NET app
+needs, plus BusyBox for the healthcheck's `wget`. It runs as the image's non-root
+`app` user (UID 1654).
+
+The server is built with invariant globalization: it formats with the invariant
+culture and compares strings ordinally, so it does not need ICU, the largest
+library a .NET image would otherwise carry. Code that needs culture-specific
+formatting or sorting would have to add ICU back.
 
 > [!NOTE]
 > When publishing from the CLI, you will need to manually set the "package" (image) to publish and then assign the
@@ -70,24 +77,34 @@ Use an absolute path — relative paths resolve to the container's working direc
 which is ephemeral.
 
 > [!WARNING]
-> The container runs as a non-root `appuser` (UID 1000). The image creates
-> `/data` and `/logs` owned by `appuser`, so named Docker volumes mounted there
+> The container runs as the non-root `app` user (UID 1654). The image creates
+> `/data` and `/logs` owned by `app`, so named Docker volumes mounted there
 > inherit the right permissions; named volumes mounted at other paths are owned
 > by root and the server cannot write to them. **Bind mounts** (`driver_opts`
 > with `o = "bind"`) require the host directory to already exist and be writable
-> by UID 1000:
+> by UID 1654:
 >
 > ```bash
-> mkdir -p /var/lib/my-app && chown 1000:1000 /var/lib/my-app
+> mkdir -p /var/lib/my-app && chown 1654:1654 /var/lib/my-app
 > ```
 >
 > On NixOS, use `systemd.tmpfiles.rules`:
 >
 > ```nix
-> systemd.tmpfiles.rules = [ "d /var/lib/my-app 0755 1000 1000 -" ];
+> systemd.tmpfiles.rules = [ "d /var/lib/my-app 0755 1654 1654 -" ];
 > ```
 >
 > Failure to do this results in `SQLite Error 14: 'unable to open database file'`.
+
+### Health checks
+
+Container healthchecks probe `GET /api/status`, which reports the build version,
+uptime, and a database connectivity probe, returning `503` when the database is
+unreachable.
+
+The image has BusyBox `wget` for the probe. Point it at `127.0.0.1` rather than
+`localhost`: the server listens on IPv4 only, and BusyBox `wget` tries `::1`
+first without falling back.
 
 ## Static Assets
 

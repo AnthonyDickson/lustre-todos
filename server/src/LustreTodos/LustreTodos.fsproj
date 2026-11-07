@@ -8,6 +8,9 @@
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- No culture-specific behaviour: formatting uses the invariant culture and
+         comparisons are ordinal. Dropping ICU keeps it out of the image. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>
