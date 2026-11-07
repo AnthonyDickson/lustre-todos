@@ -96,7 +96,13 @@ module Config =
         (config : IConfiguration)
         (sectionName : string)
         : 'T =
-        let value = config.GetSection(sectionName).Get<'T> ()
+        let section = config.GetSection sectionName
+
+        // `Get` returns null for an absent section, which the validator rejects with an exception.
+        if not (section.Exists ()) then
+            raise (OptionsValidationException (sectionName, typeof<'T>, [ $"{sectionName} is required" ]))
+
+        let value = section.Get<'T> ()
         let validator = DataAnnotationValidateOptions<'T> Options.DefaultName
         let result = validator.Validate (Options.DefaultName, value)
 
@@ -148,7 +154,12 @@ module Config =
             Oidc = read config OidcSectionName
             Oauth2 = oauthOptions
             Login = read config LoginSectionName
-            Logging = read config LoggingSectionName
+            // Every setting in the section is optional, so an absent section means console logging only.
+            Logging =
+                if sectionExists config LoggingSectionName then
+                    read config LoggingSectionName
+                else
+                    { FilePath = "" }
             DataProtection =
                 if sectionExists config DataProtectionSectionName then
                     Some (read config DataProtectionSectionName)
