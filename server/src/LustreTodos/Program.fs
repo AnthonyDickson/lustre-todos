@@ -201,10 +201,10 @@ let private configureSerilog
 
 let private configureForwardedHeaders (options : ForwardedHeadersOptions) : unit =
     options.ForwardedHeaders <- ForwardedHeaders.XForwardedFor ||| ForwardedHeaders.XForwardedProto
-    options.KnownIPNetworks.Clear ()
-    options.KnownProxies.Clear ()
 
-    // Trust common Docker/private network ranges
+    // Trust common Docker/private network ranges, in addition to the default loopback addresses
+    // (127.0.0.0/8 and ::1), which a proxy on the same host uses when the server runs natively or
+    // with host networking.
     options.KnownIPNetworks.Add (System.Net.IPNetwork.Parse "10.0.0.0/8")
     options.KnownIPNetworks.Add (System.Net.IPNetwork.Parse "172.16.0.0/12")
     options.KnownIPNetworks.Add (System.Net.IPNetwork.Parse "192.168.0.0/16")

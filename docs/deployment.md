@@ -102,3 +102,10 @@ publish. Persistent server assets should have their source of truth elsewhere
 
 The web server is intended to run behind a reverse proxy such as nginx or Caddy.
 No effort is made to make the web server secure to deploy on its own.
+
+The server trusts `X-Forwarded-For` and `X-Forwarded-Proto` from loopback
+(`127.0.0.0/8`, `::1`) and the private ranges `10.0.0.0/8`, `172.16.0.0/12`, and
+`192.168.0.0/16`, which cover a proxy on the same host, including one reaching a
+container through a published port. A proxy at any other address has its headers
+ignored, so the server sees plain HTTP and builds `http://` OIDC callback URLs,
+which the provider rejects.
