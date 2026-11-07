@@ -96,6 +96,19 @@ which is ephemeral.
 >
 > Failure to do this results in `SQLite Error 14: 'unable to open database file'`.
 
+### Sign-in keys
+
+The auth cookie is encrypted with ASP.NET Core Data Protection keys. Set
+`DataProtection__KeysPath` to a directory on a persistent volume, as the example
+compose file does with `/data/keys`; otherwise the keys live in the container's
+home directory and every container recreation, such as an upgrade, signs every
+user out. The server creates the directory.
+
+The keys are stored unencrypted, which the server warns about at startup ("No
+XML encryptor configured"). Anyone who can read them can forge a sign-in, but
+they sit on the same volume as the database, which already holds all the data
+the sign-in protects, so back up and restrict the volume accordingly.
+
 ### Health checks
 
 Container healthchecks probe `GET /api/status`, which reports the build version,

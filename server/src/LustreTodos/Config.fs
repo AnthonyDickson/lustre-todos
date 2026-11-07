@@ -44,12 +44,22 @@ type LoginConfig = {
 [<CLIMutable>]
 type LoggingConfig = { FilePath : string }
 
+/// <summary>Where ASP.NET Core Data Protection keeps the keys that encrypt the auth cookie. Without it
+/// the keys live in the user profile, which a container loses when it is recreated, signing every user
+/// out.</summary>
+[<CLIMutable>]
+type DataProtectionConfig = {
+    [<Required>]
+    KeysPath : string
+}
+
 type AppConfig = {
     ConnectionString : string
     Oidc : OidcConfig
     Oauth2 : OAuth2Config option
     Login : LoginConfig
     Logging : LoggingConfig
+    DataProtection : DataProtectionConfig option
 }
 
 module Config =
@@ -67,6 +77,9 @@ module Config =
 
     [<Literal>]
     let private LoggingSectionName = "Logging"
+
+    [<Literal>]
+    let private DataProtectionSectionName = "DataProtection"
 
     let private register<'T when 'T : not struct and 'T : (new : unit -> 'T)>
         (services : IServiceCollection)
@@ -111,4 +124,9 @@ module Config =
             Oauth2 = oauthOptions
             Login = read config LoginSectionName
             Logging = read config LoggingSectionName
+            DataProtection =
+                if sectionExists config DataProtectionSectionName then
+                    Some (read config DataProtectionSectionName)
+                else
+                    None
         }
