@@ -173,7 +173,10 @@ module Auth =
             }
 
     let endpoints (loginReturnUrl : string) : Oxpecker.RoutingTypes.Endpoint seq = [
-        GET [ route "/login" (loginHandler loginReturnUrl); route "/logout" logoutHandler ]
+        GET [ route "/login" (loginHandler loginReturnUrl) ]
+        // POST, so another site cannot log the user out with a link: the SameSite=Lax cookie is not
+        // sent with its cross-site form posts.
+        POST [ route "/logout" logoutHandler ]
     ]
 
     let getUserId (ctx : HttpContext) : Result<string, DomainError> =

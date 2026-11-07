@@ -62,7 +62,6 @@ pub type Msg {
   UserDeletedTodo(id: uuid.Uuid)
   UserDeletedCompletedTodos
   UserChangedVisibility(visibility: Visibility)
-  UserClickedLogout
   NoOp
 }
 
@@ -478,8 +477,6 @@ pub fn update(
       [],
     )
 
-    UserClickedLogout -> #(model, effect.Redirect("/logout"), [])
-
     NoOp -> #(model, effect.none(), [])
   }
 }
@@ -709,14 +706,18 @@ pub fn view(model: Model) -> Element(Msg) {
         False -> element.none()
       },
       html.footer([attribute.class("flex justify-end py-2 px-5 min-w-lg")], [
-        html.button(
-          [
-            attribute.class("text-sm text-gray-400 hover:text-gray-600"),
-            attribute.attribute("data-testid", "logout"),
-            event.on_click(UserClickedLogout),
-          ],
-          [element.text("Logout")],
-        ),
+        // Logging out is a form post, so another site cannot log the user out
+        // with a link.
+        html.form([attribute.method("post"), attribute.action("/logout")], [
+          html.button(
+            [
+              attribute.type_("submit"),
+              attribute.class("text-sm text-gray-400 hover:text-gray-600"),
+              attribute.attribute("data-testid", "logout"),
+            ],
+            [element.text("Logout")],
+          ),
+        ]),
       ]),
     ]),
   ])
