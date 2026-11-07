@@ -113,6 +113,8 @@ let private applyMigrations (connectionString : string) =
         DeployChanges.To
             .SqliteDatabase(connectionString)
             .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly ())
+            // A script that fails partway leaves the schema as it was. See docs/database.md.
+            .WithTransactionPerScript()
             .LogToConsole()
             .Build()
             .PerformUpgrade ()

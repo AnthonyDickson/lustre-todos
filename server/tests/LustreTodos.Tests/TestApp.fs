@@ -77,6 +77,7 @@ module TestApp =
             DbUp.DeployChanges.To
                 .SqliteDatabase(connectionString)
                 .WithScriptsEmbeddedInAssembly(typeof<Todo>.Assembly)
+                .WithTransactionPerScript()
                 .Build()
                 .PerformUpgrade ()
 
