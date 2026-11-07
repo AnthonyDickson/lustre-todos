@@ -35,6 +35,11 @@ culture and compares strings ordinally, so it does not need ICU, the largest
 library a .NET image would otherwise carry. Code that needs culture-specific
 formatting or sorting would have to add ICU back.
 
+The Docker Publish workflow checks the tag is semver, builds the image, and
+smoke tests it (a named volume over `/data`, production settings, waiting for
+`/api/status` to report the requested version) before pushing. Pre-releases are
+not tagged `latest`.
+
 > [!NOTE]
 > When publishing from the CLI, you will need to manually set the "package" (image) to publish and then assign the
 > package to your repo. See the page on [Working with the Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)

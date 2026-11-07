@@ -28,21 +28,90 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build and push
+      # Tags the image with the version, plus latest unless it is a
+      # pre-release, and normalises the version (v1.2.3 becomes 1.2.3).
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/anthonydickson/lustre-todos
+          tags: type=semver,pattern={{version}},value=${{ inputs.tag }}
+
+      # metadata-action only warns about an invalid semver and outputs no
+      # version.
+      - name: Check the tag is semver
+        env:
+          TAG: ${{ inputs.tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          if [[ -z "$VERSION" ]]; then
+            echo "'$TAG' is not a valid semver version. See https://semver.org/"
+            exit 1
+          fi
+
+      - name: Build
         uses: docker/build-push-action@v7
         with:
           context: .
-          push: true
-          tags: |
-            ghcr.io/anthonydickson/lustre-todos:${{ inputs.tag }}
-            ghcr.io/anthonydickson/lustre-todos:latest
+          load: true
+          tags: lustre-todos:smoke
           build-args: |
-            APP_VERSION=${{ inputs.tag }}
+            APP_VERSION=${{ steps.meta.outputs.version }}
             GIT_SHA=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Create and push git tag
+      # Run the image as docker-compose.prod.example.yml does (named
+      # volume over /data, production environment) and wait for a healthy
+      # status report carrying the requested version. The OIDC authority is
+      # only contacted on login, so a placeholder suffices.
+      - name: Smoke test
+        id: smoke
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
         run: |
-          git tag "${{ inputs.tag }}"
-          git push origin "${{ inputs.tag }}"
+          docker run -d --name smoke -p 5000:5000 -v smoke-data:/data \
+            -e Oidc__Authority=https://auth.example.invalid \
+            -e Oidc__ClientId=lustre-todos \
+            -e Oidc__ClientSecret=smoke \
+            -e Oidc__CallbackPath=/signin-oidc \
+            -e Login__ReturnUrl=http://localhost:5000/ \
+            -e "ConnectionStrings__Default=Data Source=/data/app.sqlite3" \
+            -e DataProtection__KeysPath=/data/keys \
+            lustre-todos:smoke
+          for _ in $(seq 1 30); do
+            if status="$(curl -fsS http://localhost:5000/api/status)"; then
+              echo "$status"
+              if grep -qF "\"version\":\"$VERSION+" <<< "$status"; then
+                exit 0
+              fi
+              echo "Expected version $VERSION"
+              break
+            fi
+            sleep 1
+          done
+          docker logs smoke
+          exit 1
+
+      - if: failure() && steps.smoke.outcome == 'failure'
+        run: |
+          echo "The image failed its smoke test. Build it with 'docker build .' and run it with a named volume over /data to reproduce."
+
+      - name: Push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.version }}
+            GIT_SHA=${{ github.sha }}
+          cache-from: type=gha
+
+      - name: Create and push git tag
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          git tag "$VERSION"
+          git push origin "$VERSION"
