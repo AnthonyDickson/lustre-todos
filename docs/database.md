@@ -63,6 +63,10 @@ Deletes `app.sqlite3`, re-applies all migrations in order, regenerates `Db.fs`.
 - **Standalone migrations.** `scripts/migrate.fsx` applies migrations without
   building the server. This avoids the chicken-and-egg problem where a schema
   change breaks the build before `Db.fs` is regenerated.
+- **Foreign keys are enforced per connection.** SQLite builds without a default
+  silently ignore them, so the server adds `Foreign Keys=True` to the configured
+  connection string and every connection enforces them. WAL journal mode is set
+  once at startup; it is stored in the database file, so it persists.
 
 ## How It Works
 

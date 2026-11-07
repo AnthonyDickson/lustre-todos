@@ -1,7 +1,9 @@
 namespace LustreTodos.Config
 
+open System
 open System.ComponentModel.DataAnnotations
 
+open Microsoft.Data.Sqlite
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Options
@@ -105,6 +107,29 @@ module Config =
 
     let private sectionExists (config : IConfiguration) (name : string) = (config.GetSection name).Exists ()
 
+    /// <summary>Enforce foreign keys on every connection opened with the connection string. SQLite
+    /// enforces them per connection, so the setting belongs in the connection string rather than a
+    /// one-off <c>PRAGMA</c>. The bundled e_sqlite3 build already defaults to on; this keeps the
+    /// guarantee independent of the native library's build flags.</summary>
+    let withForeignKeys (connectionString : string) =
+        SqliteConnectionStringBuilder (connectionString, ForeignKeys = Nullable true)
+        |> string
+
+    /// Raises `OptionsValidationException` when the connection string is missing, rather than
+    /// letting SQLite open a temporary database.
+    let private readConnectionString (config : IConfiguration) =
+        match config.GetConnectionString ConnectionName with
+        | null
+        | "" ->
+            raise (
+                OptionsValidationException (
+                    "ConnectionStrings",
+                    typeof<string>,
+                    [ $"ConnectionStrings:{ConnectionName} is required" ]
+                )
+            )
+        | connectionString -> withForeignKeys connectionString
+
     /// Raises `OptionsValidationException` for missing or invalid config entries.
     let load (services : IServiceCollection) (config : IConfiguration) : AppConfig =
         register<OidcConfig> services config OidcSectionName
@@ -119,7 +144,7 @@ module Config =
                 None
 
         {
-            ConnectionString = config.GetConnectionString ConnectionName
+            ConnectionString = readConnectionString config
             Oidc = read config OidcSectionName
             Oauth2 = oauthOptions
             Login = read config LoginSectionName

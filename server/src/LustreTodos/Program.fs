@@ -123,13 +123,11 @@ let private applyMigrations (connectionString : string) =
     use conn = new SqliteConnection (connectionString)
     conn.Open ()
 
+    // WAL is stored in the database file, so setting it once applies to every later connection.
+    // Foreign keys are per connection and are set in the connection string (Config.withForeignKeys).
     use walCmd = conn.CreateCommand ()
     walCmd.CommandText <- "PRAGMA journal_mode = WAL"
     walCmd.ExecuteNonQuery () |> ignore
-
-    use fkCmd = conn.CreateCommand ()
-    fkCmd.CommandText <- "PRAGMA foreign_keys = ON"
-    fkCmd.ExecuteNonQuery () |> ignore
 
 let private handleException (loggerFactory : ILoggerFactory) (next : RequestDelegate) : RequestDelegate =
     let logger = loggerFactory.CreateLogger "LustreTodos.Program"
