@@ -184,4 +184,4 @@ module Auth =
 
         match userId with
         | Some userId -> Ok userId
-        | None -> Error DomainError.UserNotFound
+        | None -> Error DomainError.Unauthorised

@@ -92,6 +92,10 @@ by `just db-migrate` to apply migrations without building the server.
 
 ### Error Handling
 
-SqlHydra throws on infrastructure failures (dead connection, disk full). A
-global middleware in `Program.fs` catches all unhandled exceptions and returns
-`500`. Handlers focus on domain logic (`Option` → `404`, validation → `400`).
+Handlers and their queries do not catch exceptions. `Endpoint.handler` runs
+each handler and converts what it throws into a `DomainError`: a SQLite
+constraint violation becomes `Conflict` (`409`), any other SQLite error
+`DatabaseError` (`500`), a body over the size limit a validation error (`400`),
+and anything else `UnhandledException` (`500`). Handlers focus on domain logic
+(`Option` → `404`, validation → `400`). A global middleware in `Program.fs`
+remains as a last resort for exceptions outside a handler.

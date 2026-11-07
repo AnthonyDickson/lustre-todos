@@ -117,6 +117,26 @@ module TodosTests =
                 | Error err -> failtest err
             }
 
+            testCaseAsync "POST /api/todos with an existing ID is rejected and keeps the original"
+            <| async {
+                use app = newApp ()
+
+                let original = todo (Guid.NewGuid ()) "Original" false
+                let! _ = postJson app.Client "/api/todos" original |> Async.AwaitTask
+
+                let! response =
+                    postJson app.Client "/api/todos" { original with Title = "Overwrite" }
+                    |> Async.AwaitTask
+
+                Expect.equal response.StatusCode HttpStatusCode.Conflict "status code should be 409"
+
+                let! stored = app.Client.GetStringAsync $"/api/todos/{original.Id}" |> Async.AwaitTask
+
+                match Decode.fromString<Todo> stored with
+                | Ok stored -> Expect.equal stored.Title original.Title "the original should be kept"
+                | Error err -> failtest err
+            }
+
             testCaseAsync "PATCH /api/todos/{id} updates a todo"
             <| async {
                 use app = newApp ()

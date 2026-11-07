@@ -86,7 +86,6 @@ module Api =
     open System.Threading.Tasks
 
     open FsToolkit.ErrorHandling
-    open Microsoft.Data.Sqlite
     open Microsoft.OpenApi
     open Oxpecker
     open Oxpecker.OpenApi
@@ -106,19 +105,14 @@ module Api =
 
         let private getAll (queryContext : QueryContextFactory) (userId : string) =
             task {
-                try
-                    let! rows =
-                        selectTask queryContext {
-                            for t in main.Todos do
-                                select t
-                                where (t.UserId = userId)
-                        }
+                let! rows =
+                    selectTask queryContext {
+                        for t in main.Todos do
+                            select t
+                            where (t.UserId = userId)
+                    }
 
-                    let todos = rows |> List.ofSeq |> List.map Todo.fromRow
-
-                    return Ok todos
-                with ex ->
-                    return Error (DatabaseError (ex.Message, Some ex))
+                return rows |> List.ofSeq |> List.map Todo.fromRow
             }
 
         let private handler (queryContext : QueryContextFactory) : EndpointHandler =
@@ -156,19 +150,14 @@ module Api =
 
         let private get (queryContext : QueryContextFactory) (id : Guid) (userId : string) =
             task {
-                try
-                    let! result =
-                        selectTask queryContext {
-                            for t in main.Todos do
-                                where (t.Id = id && t.UserId = userId)
-                                tryHead
-                        }
+                let! result =
+                    selectTask queryContext {
+                        for t in main.Todos do
+                            where (t.Id = id && t.UserId = userId)
+                            tryHead
+                    }
 
-                    let todo = result |> Option.map Todo.fromRow
-
-                    return Ok todo
-                with ex ->
-                    return Error (DatabaseError (ex.Message, Some ex))
+                return result |> Option.map Todo.fromRow
             }
 
         let private handler (queryContext : QueryContextFactory) (id : Guid) : EndpointHandler =
@@ -211,18 +200,13 @@ module Api =
 
         let private insert (queryContext : QueryContextFactory) (todo : Todo) (userId : string) =
             task {
-                try
-                    let! _ =
-                        insertTask queryContext {
-                            for t in main.Todos do
-                                entity (Todo.toRow todo userId)
-                        }
+                let! _ =
+                    insertTask queryContext {
+                        for t in main.Todos do
+                            entity (Todo.toRow todo userId)
+                    }
 
-                    return Ok ()
-                with
-                | :? SqliteException as ex when ex.SqliteErrorCode = 19 ->
-                    return Error (Conflict $"A todo with ID %O{todo.Id} already exists")
-                | ex -> return Error (DatabaseError (ex.Message, Some ex))
+                return ()
             }
 
         let private handler (queryContext : QueryContextFactory) : EndpointHandler =
@@ -271,32 +255,27 @@ module Api =
             (completed : bool)
             =
             task {
-                try
-                    use! shared = queryContext.OpenContextAsync ()
-                    shared.BeginTransaction ()
+                use! shared = queryContext.OpenContextAsync ()
+                shared.BeginTransaction ()
 
-                    let! _rowsAffected =
-                        updateTask shared {
-                            for t in main.Todos do
-                                set t.Title title
-                                set t.Completed completed
-                                where (t.Id = id && t.UserId = userId)
-                        }
+                let! _rowsAffected =
+                    updateTask shared {
+                        for t in main.Todos do
+                            set t.Title title
+                            set t.Completed completed
+                            where (t.Id = id && t.UserId = userId)
+                    }
 
-                    let! result =
-                        selectTask shared {
-                            for t in main.Todos do
-                                where (t.Id = id && t.UserId = userId)
-                                tryHead
-                        }
+                let! result =
+                    selectTask shared {
+                        for t in main.Todos do
+                            where (t.Id = id && t.UserId = userId)
+                            tryHead
+                    }
 
-                    shared.CommitTransaction ()
+                shared.CommitTransaction ()
 
-                    let todo = result |> Option.map Todo.fromRow
-
-                    return Ok todo
-                with ex ->
-                    return Error (DatabaseError (ex.Message, Some ex))
+                return result |> Option.map Todo.fromRow
             }
 
         let private handler (queryContext : QueryContextFactory) (id : Guid) : EndpointHandler =
@@ -344,18 +323,13 @@ module Api =
 
         let delete (queryContext : QueryContextFactory) (id : Guid) (userId : string) =
             task {
-                try
-                    let! rows =
-                        deleteTask queryContext {
-                            for t in main.Todos do
-                                where (t.Id = id && t.UserId = userId)
-                        }
+                let! rows =
+                    deleteTask queryContext {
+                        for t in main.Todos do
+                            where (t.Id = id && t.UserId = userId)
+                    }
 
-                    let deleted = rows > 0
-
-                    return Ok deleted
-                with ex ->
-                    return Error (DatabaseError (ex.Message, Some ex))
+                return rows > 0
             }
 
         let private handler (queryContext : QueryContextFactory) (id : Guid) : EndpointHandler =
@@ -396,17 +370,9 @@ module Api =
         let Path = "/api/todos/completed"
 
         let private deleteCompleted (queryContext : QueryContextFactory) (userId : string) =
-            task {
-                try
-                    let! rowsAffected =
-                        deleteTask queryContext {
-                            for t in main.Todos do
-                                where (t.Completed && t.UserId = userId)
-                        }
-
-                    return Ok rowsAffected
-                with ex ->
-                    return Error (DatabaseError (ex.Message, Some ex))
+            deleteTask queryContext {
+                for t in main.Todos do
+                    where (t.Completed && t.UserId = userId)
             }
 
         let private handler (queryContext : QueryContextFactory) : EndpointHandler =
