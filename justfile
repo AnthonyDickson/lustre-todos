@@ -9,7 +9,7 @@ server-build:
 
 # Run the server (auto-applies DB migrations)
 server-watch:
-	ASPNETCORE_ENVIRONMENT=Development dotnet watch run --project server/src/LustreTodos --no-hot-reload
+	ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS="${ASPNETCORE_URLS:-http://0.0.0.0:5000}" dotnet watch run --project server/src/LustreTodos --no-hot-reload
 
 # Expecto tests (through the Expecto test adapter, same as IDE test explorers)
 server-test:

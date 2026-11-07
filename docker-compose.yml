@@ -27,6 +27,7 @@ services:
       dotnet watch run --no-hot-reload
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:5000
     volumes:
       - ./.git:/src/.git:ro
       - ./server:/src/server

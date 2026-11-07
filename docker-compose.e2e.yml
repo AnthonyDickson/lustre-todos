@@ -26,6 +26,7 @@ services:
       sh -c "rm -f /tmp/todos_e2e.db && dotnet watch run --no-hot-reload"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:5000
       - Login__ReturnUrl=http://localhost:5173/
       - ConnectionStrings__Default=Data Source=/tmp/todos_e2e.db
     volumes:
