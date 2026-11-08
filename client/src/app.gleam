@@ -5,6 +5,7 @@ import lustre/attribute
 import lustre/effect as lustre_effect
 import lustre/element.{type Element}
 import lustre/element/html
+import lustre_todos/shared/auth_route
 import lustre_todos/shared/effect
 import lustre_todos/shared/http_effect
 import lustre_todos/shared/out_msg.{type OutMsg}
@@ -16,11 +17,18 @@ import youid/uuid.{type Uuid}
 /// The page the current route shows, with its state.
 pub type Page {
   TodoPage(todo_page.Model)
+  SignedOut
   NotFound
 }
 
 pub type Model {
-  Model(page: Page, toasts: List(Toast))
+  Model(
+    page: Page,
+    toasts: List(Toast),
+    /// The current path, query, and fragment, so a login after the session
+    /// expires returns to them.
+    url: String,
+  )
 }
 
 pub type Msg {
@@ -31,7 +39,10 @@ pub type Msg {
 }
 
 pub fn init(_flags) -> #(Model, effect.Effect(Msg)) {
-  #(Model(page: NotFound, toasts: []), effect.init_routing(UrlChanged))
+  #(
+    Model(page: NotFound, toasts: [], url: "/"),
+    effect.init_routing(UrlChanged),
+  )
 }
 
 fn map_out_msg(
@@ -84,34 +95,40 @@ fn update_todo_page(
   |> with_out_msgs(out_msgs)
 }
 
-/// Show the page for `route`. Staying on the todo page keeps its state and only
-/// changes the filter; arriving from another page starts it afresh.
+/// Show the page for `route`.
 fn change_page(
   model: Model,
   route: route.Route,
 ) -> #(Model, effect.Effect(Msg)) {
-  let visibility = case route {
-    route.AllTodos -> Ok(todo_page.All)
-    route.ActiveTodos -> Ok(todo_page.Active)
-    route.CompletedTodos -> Ok(todo_page.Completed)
-    route.NotFound -> Error(Nil)
+  case route {
+    route.AllTodos -> show_todos(model, todo_page.All)
+    route.ActiveTodos -> show_todos(model, todo_page.Active)
+    route.CompletedTodos -> show_todos(model, todo_page.Completed)
+    route.SignedOut -> #(Model(..model, page: SignedOut), effect.none())
+    route.NotFound -> #(Model(..model, page: NotFound), effect.none())
   }
+}
 
-  case visibility, model.page {
-    Ok(visibility), TodoPage(page_model) ->
+/// Staying on the todo page keeps its state and only changes the filter;
+/// arriving from another page starts it afresh.
+fn show_todos(
+  model: Model,
+  visibility: todo_page.Visibility,
+) -> #(Model, effect.Effect(Msg)) {
+  case model.page {
+    TodoPage(page_model) ->
       update_todo_page(
         model,
         page_model,
         todo_page.UserChangedVisibility(visibility),
       )
-    Ok(visibility), NotFound -> {
+    SignedOut | NotFound -> {
       let #(page_model, page_effect) = todo_page.init(visibility)
       #(
         Model(..model, page: TodoPage(page_model)),
         effect.map(page_effect, TodoPageMsg),
       )
     }
-    Error(Nil), _ -> #(Model(..model, page: NotFound), effect.none())
   }
 }
 
@@ -119,7 +136,7 @@ pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
   case msg {
     UrlChanged(path) -> {
       let route = route.from_string(path)
-      let #(model, page_effect) = change_page(model, route)
+      let #(model, page_effect) = change_page(Model(..model, url: path), route)
       #(
         model,
         effect.batch([page_effect, effect.set_title(route.title(route))]),
@@ -129,13 +146,16 @@ pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       case model.page {
         TodoPage(page_model) -> update_todo_page(model, page_model, inner_msg)
         // A late response for a page the user has left
-        NotFound -> #(model, effect.none())
+        SignedOut | NotFound -> #(model, effect.none())
       }
     ToastDismissed(id:) -> {
       let toasts = list.filter(model.toasts, fn(toast) { toast.id != id })
       #(Model(..model, toasts:), effect.none())
     }
-    SessionExpired -> #(model, effect.Redirect("/login"))
+    SessionExpired -> #(
+      model,
+      effect.Redirect(auth_route.login_returning_to(model.url)),
+    )
   }
 }
 
@@ -161,6 +181,33 @@ fn with_auth_redirect(
 ) -> #(Model, effect.Effect(Msg)) {
   let #(model, effect) = result
   #(model, wrap_http_requests(effect))
+}
+
+fn signed_out_view() -> Element(Msg) {
+  html.main(
+    [
+      attribute.class(
+        "bg-gray-100 h-dvh flex flex-col items-center gap-4 pt-20",
+      ),
+      attribute.attribute("data-testid", "signed-out"),
+    ],
+    [
+      html.h1([attribute.class("text-4xl text-gray-500")], [
+        element.text("You have signed out"),
+      ]),
+      // A form, not a link: the client's router would catch a link to /login.
+      html.form([attribute.method("get"), attribute.action(auth_route.login)], [
+        html.button(
+          [
+            attribute.type_("submit"),
+            attribute.class("text-rose-400 hover:underline"),
+            attribute.attribute("data-testid", "sign-in"),
+          ],
+          [element.text("Sign in")],
+        ),
+      ]),
+    ],
+  )
 }
 
 fn not_found_view() -> Element(Msg) {
@@ -190,6 +237,7 @@ pub fn view(model: Model) -> Element(Msg) {
   let page = case model.page {
     TodoPage(page_model) ->
       todo_page.view(page_model) |> element.map(TodoPageMsg)
+    SignedOut -> signed_out_view()
     NotFound -> not_found_view()
   }
 

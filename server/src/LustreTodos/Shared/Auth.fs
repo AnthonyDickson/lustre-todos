@@ -24,6 +24,11 @@ module Auth =
     [<Literal>]
     let LogoutPath = "/logout"
 
+    /// <summary>The client page shown after logging out. It makes no API request, so it does not
+    /// send the user straight back to the provider.</summary>
+    [<Literal>]
+    let SignedOutPath = "/signed-out"
+
     let private policyName = "authenticated"
 
     let private polAuthScheme = "polAuth"

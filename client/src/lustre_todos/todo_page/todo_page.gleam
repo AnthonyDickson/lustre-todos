@@ -11,6 +11,7 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 import lustre_todos/shared/api_error
+import lustre_todos/shared/auth_route
 import lustre_todos/shared/effect
 import lustre_todos/shared/guard
 import lustre_todos/shared/out_msg.{type OutMsg}
@@ -752,16 +753,19 @@ pub fn view(model: Model) -> Element(Msg) {
       html.footer([attribute.class("flex justify-end py-2 px-5 min-w-lg")], [
         // Logging out is a form post, so another site cannot log the user out
         // with a link.
-        html.form([attribute.method("post"), attribute.action("/logout")], [
-          html.button(
-            [
-              attribute.type_("submit"),
-              attribute.class("text-sm text-gray-400 hover:text-gray-600"),
-              attribute.attribute("data-testid", "logout"),
-            ],
-            [element.text("Logout")],
-          ),
-        ]),
+        html.form(
+          [attribute.method("post"), attribute.action(auth_route.logout)],
+          [
+            html.button(
+              [
+                attribute.type_("submit"),
+                attribute.class("text-sm text-gray-400 hover:text-gray-600"),
+                attribute.attribute("data-testid", "logout"),
+              ],
+              [element.text("Logout")],
+            ),
+          ],
+        ),
       ]),
     ]),
   ])

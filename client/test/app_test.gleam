@@ -98,3 +98,22 @@ pub fn unknown_url_shows_not_found_test() {
 
   model.page |> should.equal(app.NotFound)
 }
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+pub fn session_expiry_logs_in_returning_to_the_current_page_test() {
+  let #(model, _) = app.init(Nil)
+  let #(model, _) = app.update(model, app.UrlChanged("/active?x=1"))
+
+  let #(_, effect) = app.update(model, app.SessionExpired)
+
+  effect |> should.equal(effect.Redirect("/login?returnUrl=%2Factive%3Fx%3D1"))
+}
+
+pub fn signed_out_page_makes_no_request_test() {
+  let #(model, _) = app.init(Nil)
+  let #(model, effect) = app.update(model, app.UrlChanged("/signed-out"))
+
+  model.page |> should.equal(app.SignedOut)
+  let assert effect.Batch([effect.NoEffect, effect.SetTitle(_)]) = effect
+}

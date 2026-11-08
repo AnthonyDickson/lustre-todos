@@ -17,6 +17,7 @@ services:
       Oidc__ClientId: "lustre-todos"
       Oidc__ClientSecret: "elmish-todos-dev-secret"
       Oidc__CallbackPath: "/signin-oidc"
+      # Oidc__LogoutUrl: "https://auth.example.com/logout?rd=https://app.example.com/signed-out"
       ConnectionStrings__Default: "Data Source=/data/app.sqlite3"
       Logging__FilePath: "/logs/app.log"
       DataProtection__KeysPath: "/data/keys"

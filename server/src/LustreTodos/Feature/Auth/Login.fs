@@ -6,15 +6,22 @@ module Login =
 
     open LustreTodos.Shared.Auth
 
-    let private handler (returnUrl : string) : EndpointHandler =
+    /// <summary>The query parameter naming the page to return to.</summary>
+    [<Literal>]
+    let ReturnUrlParameter = "returnUrl"
+
+    let private handler (baseReturnUrl : string) : EndpointHandler =
         fun ctx ->
             task {
+                let returnUrl =
+                    ctx.TryGetQueryValue ReturnUrlParameter |> ReturnUrl.resolve baseReturnUrl
+
                 if ctx.User.Identity.IsAuthenticated then
-                    ctx.Response.Redirect "/"
+                    ctx.Response.Redirect returnUrl
                 else
                     let props = AuthenticationProperties (RedirectUri = returnUrl)
                     return! ctx.ChallengeAsync (Auth.oidcScheme, props)
             }
 
-    let endpoint (returnUrl : string) : Endpoint =
-        route Auth.LoginPath (handler returnUrl)
+    let endpoint (baseReturnUrl : string) : Endpoint =
+        route Auth.LoginPath (handler baseReturnUrl)

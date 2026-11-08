@@ -17,7 +17,7 @@ pub fn from_string_defaults_to_not_found_test() {
 }
 
 pub fn to_string_round_trips_test() {
-  [route.AllTodos, route.ActiveTodos, route.CompletedTodos]
+  [route.AllTodos, route.ActiveTodos, route.CompletedTodos, route.SignedOut]
   |> list.all(fn(r) { route.from_string(route.to_string(r)) == r })
   |> should.be_true
 }

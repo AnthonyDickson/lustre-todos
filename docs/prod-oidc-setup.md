@@ -22,10 +22,22 @@ Oidc__Authority              # Required. OIDC discovery URL
 Oidc__ClientId               # Required. SPA client ID (confidential)
 Oidc__ClientSecret           # Required. SPA client secret
 Oidc__CallbackPath           # Required. Redirect URI path (e.g. /signin-oidc)
-Login__ReturnUrl             # Required. Post-login redirect (e.g. https://app.example.com/)
+Oidc__LogoutUrl              # Optional. The provider's logout page, which /logout redirects to
+Login__ReturnUrl             # Required. Post-login base URL (e.g. https://app.example.com/)
 OAuth2__AuthorizationUrl     # Optional. For Scalar OAuth2 flow
 OAuth2__TokenUrl             # Optional. For Scalar OAuth2 flow
 ```
+
+`/login` returns to the page the user was on (its `returnUrl` query parameter),
+resolved against `Login__ReturnUrl`; anything other than a local path falls back
+to `Login__ReturnUrl`, so the login cannot redirect to another site.
+
+`/logout` (a POST) clears the session cookie and redirects to `Oidc__LogoutUrl`
+when set, so the provider session ends too. Without it, the user lands on the
+client's `/signed-out` page, which makes no API request; signing in again then
+skips the provider's login form while its session lasts. Authelia 4.39 lacks
+RP-initiated logout, so its logout page is configured directly; `rd` sends the
+user back to the app afterwards, if Authelia allows that domain.
 
 `OAuth2__AuthorizationUrl` and `OAuth2__TokenUrl` are only needed if you expose
 the Scalar API docs in production.
@@ -81,6 +93,7 @@ export Oidc__Authority=https://auth.example.com
 export Oidc__ClientId=__PROJECT_KEBAB__
 export Oidc__ClientSecret=<your-production-secret>
 export Oidc__CallbackPath=/signin-oidc
+export Oidc__LogoutUrl="https://auth.example.com/logout?rd=https://app.example.com/signed-out"
 export Login__ReturnUrl=https://app.example.com/
 export OAuth2__AuthorizationUrl=https://auth.example.com/api/oidc/authorization
 export OAuth2__TokenUrl=https://auth.example.com/api/oidc/token

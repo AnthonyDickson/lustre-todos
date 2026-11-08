@@ -118,7 +118,7 @@ Both satisfy the `"authenticated"` authorization policy. The `requireAuth` middl
 
 Cookie defaults in production: `SecurePolicy=Always`, `SameSite=Lax`, `HttpOnly=true`. In dev, `RequireHttpsMetadata=false` and self-signed certs are accepted.
 
-Environment config via `Oidc:Authority`, `Oidc:ClientId`, `Oidc:ClientSecret`, `Oidc:CallbackPath`. The `Login:ReturnUrl` and `OAuth2:*` settings are read in `Program.fs`.
+Environment config via `Oidc:Authority`, `Oidc:ClientId`, `Oidc:ClientSecret`, `Oidc:CallbackPath`, and optionally `Oidc:LogoutUrl` (the provider's logout page, which `/logout` redirects to; without it `/logout` lands on the client's `/signed-out` page). `/login?returnUrl=` returns to a local path resolved against `Login:ReturnUrl`, so an expired session returns the user to the page they were on. See [docs/prod-oidc-setup.md](docs/prod-oidc-setup.md).
 
 ### Vertical Slice Architecture (example: `Feature/Todo/`)
 

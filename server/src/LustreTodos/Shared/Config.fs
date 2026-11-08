@@ -23,6 +23,12 @@ type OidcConfig = {
     CallbackPath : string
 
     ValidAudiences : string array
+
+    /// <summary>The provider's logout page, which <c>/logout</c> redirects to so the provider
+    /// session ends with the app's. Optional: without it the next sign in skips the provider's
+    /// login form.</summary>
+    [<Url>]
+    LogoutUrl : string
 }
 
 [<CLIMutable>]

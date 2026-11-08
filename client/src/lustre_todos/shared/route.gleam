@@ -6,6 +6,9 @@ pub type Route {
   AllTodos
   ActiveTodos
   CompletedTodos
+  /// Shown after logging out. It makes no API request, so it does not send the
+  /// user straight back to the provider.
+  SignedOut
   NotFound
 }
 
@@ -15,6 +18,7 @@ pub fn to_string(route: Route) -> String {
     AllTodos -> "/"
     ActiveTodos -> "/active"
     CompletedTodos -> "/completed"
+    SignedOut -> "/signed-out"
     NotFound -> "/not-found"
   }
 }
@@ -23,6 +27,7 @@ pub fn to_string(route: Route) -> String {
 pub fn title(route: Route) -> String {
   let name = case route {
     AllTodos | ActiveTodos | CompletedTodos -> "Todos"
+    SignedOut -> "Signed out"
     NotFound -> "Page Not Found"
   }
   name <> " | LustreTodos"
@@ -40,6 +45,7 @@ pub fn from_string(url: String) -> Route {
     [] -> AllTodos
     ["active"] -> ActiveTodos
     ["completed"] -> CompletedTodos
+    ["signed-out"] -> SignedOut
     _ -> NotFound
   }
 }
