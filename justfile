@@ -3,6 +3,12 @@ PUBLISH_DIR := env_var_or_default("PUBLISH_DIR", "server/src/LustreTodos/bin/Rel
 VERSION := env_var_or_default("VERSION", "0.0.0-local")
 GIT_SHA := env_var_or_default("GIT_SHA", "")
 
+# Run the dev stack (Authelia, server, client) in Docker; Ctrl+C stops and removes it. The `-` ignores the exit
+# code Ctrl+C gives `up`, so `down` still runs
+run:
+	-docker compose -f docker/docker-compose.yml up
+	docker compose -f docker/docker-compose.yml down
+
 # Restore the server's packages. Run it after the E2E stack, whose server container rewrites the restore
 # output under server/ with the container's package paths, so host builds fail until a restore
 server-restore:

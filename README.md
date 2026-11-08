@@ -17,10 +17,11 @@ complete examples see these projects based on this template:
 Using Docker:
 
 ```bash
-docker compose -f docker/docker-compose.yml up
+just run
 ```
 
-Starts three services:
+Starts three services (`docker/docker-compose.yml`); Ctrl+C stops and removes
+them:
 
 | Service  | Port | Notes                                           |
 | -------- | ---- | ----------------------------------------------- |
@@ -53,9 +54,8 @@ See the [Justfile](./justfile) for all targets.
 - **Frontend** — Gleam/Lustre SPA with nested MVU. A custom `Effect` type keeps
   `update` pure — all I/O (HTTP, localStorage, navigation) runs through one
   interpreter. See [Client Architecture](docs/client-architecture.md).
-- **Auth** — Dev OIDC via Authelia (`docker compose -f docker/docker-compose.yml
-  up -d`, test user `dev`/`dev-password`). See
-  [Production OIDC Setup](docs/prod-oidc-setup.md).
+- **Auth** — Dev OIDC via Authelia (`just run`, test user `dev`/`dev-password`).
+  See [Production OIDC Setup](docs/prod-oidc-setup.md).
 - **Testing** — Expecto server tests, gleeunit client unit tests, Playwright E2E
   tests via Docker Compose. See `docs/server-tests.md`,
   `docs/client-architecture.md#client-tests`, and `docs/e2e-tests.md`.

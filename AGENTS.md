@@ -48,6 +48,7 @@ changes, update the doc in the same change.
 
 | Command                    | Purpose                                               |
 | -------------------------- | ----------------------------------------------------- |
+| `just run`                 | Dev stack in Docker (Authelia, server, client)        |
 | `just server-build`        | Build the server                                      |
 | `just server-watch`        | Run the server at :5000 (auto-applies DB migrations)  |
 | `just server-test`         | Server Expecto tests (via the test adapter)           |
@@ -62,9 +63,9 @@ changes, update the doc in the same change.
 | `just lint`                | Lint F# with fsharplint + [custom lints](./scripts)   |
 
 Dev environment via Nix: `nix develop` (or `direnv allow`). The justfile is the
-source of truth for the full target list. Quick start: `docker compose -f
-docker/docker-compose.yml up` (log in with `dev`/`dev-password`), or natively
-`just server-watch` plus `just client-watch`. See [README.md](README.md).
+source of truth for the full target list. Quick start: `just run` (log in with
+`dev`/`dev-password`), or natively `just server-watch` plus `just client-watch`.
+See [README.md](README.md).
 
 ## Design Principles
 
