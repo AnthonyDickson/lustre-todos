@@ -98,7 +98,7 @@ jobs:
 
       - if: failure()
         run: |
-          echo "Markdown formatting check failed. Run 'just format' to fix."
+          echo "dprint formatting check failed. Run 'just format' to fix."
 
   check-db-generated:
     runs-on: ubuntu-latest
