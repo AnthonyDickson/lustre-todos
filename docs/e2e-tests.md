@@ -55,6 +55,8 @@ docker compose -f docker/docker-compose.e2e.yml down
 
 ## Conventions
 
+- Tests capture screenshots of the test subject with `support/screenshot.ts`,
+  which keeps a retry's screenshots apart from the first attempt's.
 - Tests create the data they need; they never depend on data from other tests.
 - Selectors use `data-testid` attributes. Add them to page views when
   introducing interactive elements.
