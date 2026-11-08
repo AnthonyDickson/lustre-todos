@@ -167,8 +167,6 @@ fails, its log message names the local command to reproduce it.
   in query expressions. Bind them to local `let` values first.
 - **Central Package Management**: versions live in `Directory.Packages.props`;
   project files use bare `<PackageReference Include="..." />`.
-- **Lockfile enforced**: after adding or updating NuGet packages, run
-  `dotnet restore --force-evaluate <project>`.
 - **Request body limit**: Kestrel caps request bodies at 64 KB. An endpoint that
   needs more raises its own limit through endpoint metadata rather than raising
   the global limit.

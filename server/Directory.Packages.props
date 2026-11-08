@@ -6,6 +6,9 @@
     <PackageVersion Include="FsToolkit.ErrorHandling" Version="5.2.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.11" />
+    <!-- Referenced directly so a patched Microsoft.OpenApi is used: Oxpecker.OpenApi alone
+         resolves 10.0.0, whose Microsoft.OpenApi 2.0.0 has GHSA-v5pm-xwqc-g5wc. -->
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.11" />
     <PackageVersion Include="Oxpecker.OpenApi" Version="2.1.2" />
     <PackageVersion Include="Oxpecker" Version="2.1.1" />
