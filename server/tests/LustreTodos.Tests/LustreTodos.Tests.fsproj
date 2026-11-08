@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <Compile Include="TestApp.fs" />
+    <Compile Include="TestHttp.fs" />
     <Compile Include="Todo/EndpointTests.fs" />
   </ItemGroup>
 

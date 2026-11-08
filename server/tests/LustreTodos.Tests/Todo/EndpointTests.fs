@@ -1,17 +1,14 @@
 namespace LustreTodos.Tests.Todo
 
-open System
-open System.Net
-open System.Net.Http
-open System.Text
-open Expecto
-open LustreTodos.Shared.ApiError
-open LustreTodos.Shared.Coders
-open LustreTodos.Feature.Todo
-open LustreTodos.Feature.Todo.UpdateTodo
-open LustreTodos.Tests
+module EndpointTests =
+    open System
+    open System.Net
+    open Expecto
 
-module TodosTests =
+    open LustreTodos.Feature.Todo
+    open LustreTodos.Shared.ApiError
+    open LustreTodos.Tests
+
     let private todo (id : Guid) (title : string) (completed : bool) : CreateTodo.CreateTodoRequest = {
         Id = id
         Title = title
@@ -19,17 +16,13 @@ module TodosTests =
         CreatedAt = DateTime.UtcNow
     }
 
-    let private postJson (client : HttpClient) (url : string) (value : 'T) =
-        let json = Encode.toString value
-        let content = new StringContent (json, Encoding.UTF8, "application/json")
-        client.PostAsync (url, content)
+    let private create app (request : CreateTodo.CreateTodoRequest) =
+        async {
+            let! response = TestHttp.postJson app CreateTodo.Path request |> Async.AwaitTask
+            Expect.equal response.StatusCode HttpStatusCode.Created "creating a todo should return 201"
+        }
 
-    let private patchJson (client : HttpClient) (url : string) (value : 'T) =
-        let json = Encode.toString value
-        let content = new StringContent (json, Encoding.UTF8, "application/json")
-        client.PatchAsync (url, content)
-
-    let newApp () =
+    let private newApp () =
         TestApp.create (TestAppConfig.empty |> TestAppConfig.withTodos)
 
     [<Tests>]
@@ -39,14 +32,11 @@ module TodosTests =
             <| async {
                 use app = newApp ()
 
-                let! response = app.Client.GetAsync "/api/todos" |> Async.AwaitTask
+                let! response = app.Client.GetAsync ReadAllTodos.Path |> Async.AwaitTask
 
                 Expect.equal response.StatusCode HttpStatusCode.OK "status code should be 200"
-
-                let! body = response.Content.ReadAsStringAsync () |> Async.AwaitTask
-                let result = Decode.fromString<TodoResponse list> body
-
-                Expect.equal result (Ok []) "body should be empty list"
+                let! todos = TestHttp.readJson<TodoResponse list> response
+                Expect.equal todos [] "body should be empty list"
             }
 
             testCaseAsync "GET /api/todos returns seeded todos"
@@ -54,20 +44,18 @@ module TodosTests =
                 use app = newApp ()
 
                 let expected = todo (Guid.NewGuid ()) "Buy milk" false
-                let! _ = postJson app.Client "/api/todos" expected |> Async.AwaitTask
+                do! create app.Client expected
 
-                let! response = app.Client.GetAsync "/api/todos" |> Async.AwaitTask
+                let! response = app.Client.GetAsync ReadAllTodos.Path |> Async.AwaitTask
 
                 Expect.equal response.StatusCode HttpStatusCode.OK "status code should be 200"
 
-                let! body = response.Content.ReadAsStringAsync () |> Async.AwaitTask
-
-                match Decode.fromString<TodoResponse list> body with
-                | Ok [ item ] ->
-                    Expect.equal expected.Id item.Id "id should match"
-                    Expect.equal expected.Title item.Title "title should match"
-                    Expect.equal expected.Completed item.Completed "completed should match"
-                | _ -> failtest "Expected one todo"
+                match! TestHttp.readJson<TodoResponse list> response with
+                | [ item ] ->
+                    Expect.equal item.Id expected.Id "id should match"
+                    Expect.equal item.Title expected.Title "title should match"
+                    Expect.equal item.Completed expected.Completed "completed should match"
+                | items -> failtest $"Expected one todo, got %A{items}"
             }
 
             testCaseAsync "GET /api/todos/{id} returns the todo"
@@ -75,27 +63,26 @@ module TodosTests =
                 use app = newApp ()
 
                 let expected = todo (Guid.NewGuid ()) "Walk dog" true
-                let! _ = postJson app.Client "/api/todos" expected |> Async.AwaitTask
+                do! create app.Client expected
 
-                let! response = app.Client.GetAsync $"/api/todos/{expected.Id}" |> Async.AwaitTask
+                let! response =
+                    app.Client.GetAsync (TestHttp.itemPath ReadTodo.Path expected.Id)
+                    |> Async.AwaitTask
 
                 Expect.equal response.StatusCode HttpStatusCode.OK "status code should be 200"
-
-                let! body = response.Content.ReadAsStringAsync () |> Async.AwaitTask
-
-                match Decode.fromString<TodoResponse> body with
-                | Ok item ->
-                    Expect.equal expected.Id item.Id "id should match"
-                    Expect.equal expected.Title item.Title "title should match"
-                    Expect.equal expected.Completed item.Completed "completed should match"
-                | Error err -> failtest err
+                let! item = TestHttp.readJson<TodoResponse> response
+                Expect.equal item.Id expected.Id "id should match"
+                Expect.equal item.Title expected.Title "title should match"
+                Expect.equal item.Completed expected.Completed "completed should match"
             }
 
             testCaseAsync "GET /api/todos/{id} returns 404 for missing todo"
             <| async {
                 use app = newApp ()
 
-                let! response = app.Client.GetAsync $"/api/todos/{Guid.NewGuid ()}" |> Async.AwaitTask
+                let! response =
+                    app.Client.GetAsync (TestHttp.itemPath ReadTodo.Path (Guid.NewGuid ()))
+                    |> Async.AwaitTask
 
                 Expect.equal response.StatusCode HttpStatusCode.NotFound "status code should be 404"
             }
@@ -106,18 +93,13 @@ module TodosTests =
 
                 let input = todo (Guid.NewGuid ()) "Learn F#" false
 
-                let! response = postJson app.Client "/api/todos" input |> Async.AwaitTask
+                let! response = TestHttp.postJson app.Client CreateTodo.Path input |> Async.AwaitTask
 
                 Expect.equal response.StatusCode HttpStatusCode.Created "status code should be 201"
-
-                let! body = response.Content.ReadAsStringAsync () |> Async.AwaitTask
-
-                match Decode.fromString<TodoResponse> body with
-                | Ok created ->
-                    Expect.equal input.Id created.Id "id should match"
-                    Expect.equal input.Title created.Title "title should match"
-                    Expect.equal input.Completed created.Completed "completed should match"
-                | Error err -> failtest err
+                let! created = TestHttp.readJson<TodoResponse> response
+                Expect.equal created.Id input.Id "id should match"
+                Expect.equal created.Title input.Title "title should match"
+                Expect.equal created.Completed input.Completed "completed should match"
             }
 
             testCaseAsync "POST /api/todos trims the title and rejects a blank one"
@@ -125,17 +107,14 @@ module TodosTests =
                 use app = newApp ()
 
                 let! padded =
-                    postJson app.Client "/api/todos" (todo (Guid.NewGuid ()) "  Padded  " false)
+                    TestHttp.postJson app.Client CreateTodo.Path (todo (Guid.NewGuid ()) "  Padded  " false)
                     |> Async.AwaitTask
 
-                let! body = padded.Content.ReadAsStringAsync () |> Async.AwaitTask
-
-                match Decode.fromString<TodoResponse> body with
-                | Ok created -> Expect.equal created.Title "Padded" "the title should be trimmed"
-                | Error err -> failtest err
+                let! created = TestHttp.readJson<TodoResponse> padded
+                Expect.equal created.Title "Padded" "the title should be trimmed"
 
                 let! blank =
-                    postJson app.Client "/api/todos" (todo (Guid.NewGuid ()) "   " false)
+                    TestHttp.postJson app.Client CreateTodo.Path (todo (Guid.NewGuid ()) "   " false)
                     |> Async.AwaitTask
 
                 Expect.equal blank.StatusCode HttpStatusCode.BadRequest "a blank title should be rejected"
@@ -146,29 +125,27 @@ module TodosTests =
                 use app = newApp ()
 
                 let original = todo (Guid.NewGuid ()) "Original" false
-                let! _ = postJson app.Client "/api/todos" original |> Async.AwaitTask
+                do! create app.Client original
 
+                // Another user: the ID is the primary key across every user.
                 let! response =
-                    postJson app.Client "/api/todos" { original with Title = "Overwrite" }
+                    TestHttp.postJson (app.ClientForUser "other-user") CreateTodo.Path {
+                        original with
+                            Title = "Overwrite"
+                    }
                     |> Async.AwaitTask
 
                 Expect.equal response.StatusCode HttpStatusCode.BadRequest "status code should be 400"
+                let! error = TestHttp.readJson<ApiError> response
 
-                let! body = response.Content.ReadAsStringAsync () |> Async.AwaitTask
+                Expect.equal error.Details $"A todo with ID {original.Id} already exists" "details should name the ID"
 
-                match Decode.fromString<ApiError> body with
-                | Ok error ->
-                    Expect.equal
-                        error.Details
-                        $"A todo with ID {original.Id} already exists"
-                        "details should name the ID"
-                | Error err -> failtest err
+                let! stored =
+                    app.Client.GetAsync (TestHttp.itemPath ReadTodo.Path original.Id)
+                    |> Async.AwaitTask
 
-                let! stored = app.Client.GetStringAsync $"/api/todos/{original.Id}" |> Async.AwaitTask
-
-                match Decode.fromString<TodoResponse> stored with
-                | Ok stored -> Expect.equal stored.Title original.Title "the original should be kept"
-                | Error err -> failtest err
+                let! stored = TestHttp.readJson<TodoResponse> stored
+                Expect.equal stored.Title original.Title "the original should be kept"
             }
 
             testCaseAsync "PATCH /api/todos/{id} updates a todo"
@@ -176,25 +153,22 @@ module TodosTests =
                 use app = newApp ()
 
                 let original = todo (Guid.NewGuid ()) "Old title" false
-                let! _ = postJson app.Client "/api/todos" original |> Async.AwaitTask
+                do! create app.Client original
 
-                let update : UpdateTodoRequest = {
+                let update : UpdateTodo.UpdateTodoRequest = {
                     Title = "New title"
                     Completed = true
                 }
 
-                let! response = patchJson app.Client $"/api/todos/{original.Id}" update |> Async.AwaitTask
+                let! response =
+                    TestHttp.patchJson app.Client (TestHttp.itemPath UpdateTodo.Path original.Id) update
+                    |> Async.AwaitTask
 
                 Expect.equal response.StatusCode HttpStatusCode.OK "status code should be 200"
-
-                let! body = response.Content.ReadAsStringAsync () |> Async.AwaitTask
-
-                match Decode.fromString<TodoResponse> body with
-                | Ok updated ->
-                    Expect.equal original.Id updated.Id "id should match"
-                    Expect.equal update.Title updated.Title "title should match"
-                    Expect.equal update.Completed updated.Completed "completed should match"
-                | Error err -> failtest err
+                let! updated = TestHttp.readJson<TodoResponse> response
+                Expect.equal updated.Id original.Id "id should match"
+                Expect.equal updated.Title update.Title "title should match"
+                Expect.equal updated.Completed update.Completed "completed should match"
             }
 
             testCaseAsync "DELETE /api/todos/{id} removes the todo"
@@ -202,13 +176,15 @@ module TodosTests =
                 use app = newApp ()
 
                 let item = todo (Guid.NewGuid ()) "To delete" false
-                let! _ = postJson app.Client "/api/todos" item |> Async.AwaitTask
+                do! create app.Client item
 
-                let! deleteResponse = app.Client.DeleteAsync $"/api/todos/{item.Id}" |> Async.AwaitTask
+                let! deleteResponse =
+                    app.Client.DeleteAsync (TestHttp.itemPath DeleteTodo.Path item.Id)
+                    |> Async.AwaitTask
 
                 Expect.equal deleteResponse.StatusCode HttpStatusCode.NoContent "delete status should be 204"
 
-                let! getResponse = app.Client.GetAsync $"/api/todos/{item.Id}" |> Async.AwaitTask
+                let! getResponse = app.Client.GetAsync (TestHttp.itemPath ReadTodo.Path item.Id) |> Async.AwaitTask
 
                 Expect.equal getResponse.StatusCode HttpStatusCode.NotFound "get after delete should be 404"
             }
@@ -219,20 +195,49 @@ module TodosTests =
 
                 let completed = todo (Guid.NewGuid ()) "Done task" true
                 let active = todo (Guid.NewGuid ()) "Active task" false
-                let! _ = postJson app.Client "/api/todos" completed |> Async.AwaitTask
-                let! _ = postJson app.Client "/api/todos" active |> Async.AwaitTask
+                do! create app.Client completed
+                do! create app.Client active
 
-                let! deleteResponse = app.Client.DeleteAsync "/api/todos/completed" |> Async.AwaitTask
+                let! deleteResponse = app.Client.DeleteAsync DeleteCompletedTodos.Path |> Async.AwaitTask
 
                 Expect.equal deleteResponse.StatusCode HttpStatusCode.NoContent "delete status should be 204"
 
-                let! response = app.Client.GetAsync "/api/todos" |> Async.AwaitTask
-                let! body = response.Content.ReadAsStringAsync () |> Async.AwaitTask
+                let! response = app.Client.GetAsync ReadAllTodos.Path |> Async.AwaitTask
+                let! items = TestHttp.readJson<TodoResponse list> response
+                Expect.equal (items |> List.map _.Id) [ active.Id ] "only the active todo should remain"
+            }
 
-                match Decode.fromString<TodoResponse list> body with
-                | Ok items ->
-                    Expect.equal (List.length items) 1 "should have 1 remaining todo"
-                    Expect.equal active.Id items[0].Id "remaining todo id should match"
-                | Error err -> failtest err
+            testCaseAsync "another user can neither see nor change a user's todos"
+            <| async {
+                use app = newApp ()
+                let other = app.ClientForUser "other-user"
+
+                let completed = todo (Guid.NewGuid ()) "Owned" true
+                do! create app.Client completed
+                let itemPath = TestHttp.itemPath ReadTodo.Path completed.Id
+
+                let! read = other.GetAsync itemPath |> Async.AwaitTask
+                Expect.equal read.StatusCode HttpStatusCode.NotFound "another user's read should be 404"
+
+                let! list = other.GetStringAsync ReadAllTodos.Path |> Async.AwaitTask
+                Expect.equal list "[]" "another user's list should be empty"
+
+                let! update =
+                    TestHttp.patchJson
+                        other
+                        itemPath
+                        ({ Title = "Taken"; Completed = false } : UpdateTodo.UpdateTodoRequest)
+                    |> Async.AwaitTask
+
+                Expect.equal update.StatusCode HttpStatusCode.NotFound "another user's update should be 404"
+
+                let! delete = other.DeleteAsync itemPath |> Async.AwaitTask
+                Expect.equal delete.StatusCode HttpStatusCode.NotFound "another user's delete should be 404"
+
+                let! _ = other.DeleteAsync DeleteCompletedTodos.Path |> Async.AwaitTask
+
+                let! stillThere = app.Client.GetAsync itemPath |> Async.AwaitTask
+                let! stillThere = TestHttp.readJson<TodoResponse> stillThere
+                Expect.equal stillThere.Title completed.Title "the owner's todo should be unchanged"
             }
         ]

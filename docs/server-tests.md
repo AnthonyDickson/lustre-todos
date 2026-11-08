@@ -1,75 +1,56 @@
 # Server Tests
 
-Expecto tests in `server/tests/__PROJECT_NAME__.Server.Tests/`. Also see
-[E2E Tests](e2e-tests.md) for end-to-end Playwright tests.
+Expecto tests in `server/tests/LustreTodos.Tests/`, one folder per slice. Also
+see [E2E Tests](e2e-tests.md) for end-to-end Playwright tests.
 
-## Architecture
+## Test host
 
-Uses a `TestApp` module with `HostBuilder` + `TestServer` — the .NET 10
-replacement for the deprecated `WebHostBuilder`.
+Endpoint tests run against a real server host with an in-memory test server,
+built per test from only what the feature under test needs:
 
-The host contains only what endpoints need:
+- **In-memory SQLite** with every migration applied, so tests run the real
+  schema and constraints, are hermetic, and need no files or network.
+- **The slice's production endpoint list** (e.g. `TodoEndpoints.all`). The tests
+  route the same endpoint values the production host uses, so a route added to
+  a slice is reachable from tests without editing the host.
+- **No auth middleware.** Production wraps endpoints in the auth filter, which
+  needs the full OIDC setup. The test host skips it and injects a fake user with
+  a `sub` claim instead. A request can name a different user against the same
+  database with the `X-Test-User` header (`TestApp.ClientForUser`), which the
+  cross-user scoping tests use.
 
-- SQLite (temp file, auto-cleaned)
-- Routing + Oxpecker middleware
-- The slice's production endpoint list (e.g. `TodoEndpoints.all`), without the auth filter
+Each test creates its own app, so it starts from an empty database and tests can
+run in parallel. Tests build URLs from each operation's `Path` literal, and
+`TestHttp` holds the JSON request and response helpers.
 
-### Why no auth filter
+On a `5xx` response the host prints the request's server-side log to stderr, so
+a failing test shows the real error rather than an opaque body. `dotnet test`
+shows it with `--logger "console;verbosity=detailed"`.
 
-`Program.fs` wraps every feature endpoint with `requireAuth`, which needs the full
-OIDC/JWT setup. The test host routes the same endpoint list without the filter and
-injects a fake user with a `sub` claim instead.
-
-### Fixture lifecycle
-
-`TestApp.create()` produces a record (`{ Client, CleanDatabase, Dispose }`) that
-creates a temp SQLite file, applies migrations once, and cleans up on
-`Dispose`. A `Lazy<TestApp>` at the module level shares one instance across
-all tests. Each test calls `app.CleanDatabase()` before acting.
-
-## Running Tests
+## Running
 
 ```bash
 just server-test
 # or
-dotnet test server/__PROJECT_NAME__.slnx
+dotnet test server/LustreTodos.slnx
 ```
 
-This is the only way to run them, locally and in CI, and it is the same mechanism IDE test explorers use.
-`YoloDev.Expecto.TestSdk` bridges Expecto to VSTest; it discovers tests by reflecting over `[<Tests>]`-attributed values
-in the built assembly, so every test list must carry `[<Tests>]`. There is no explicit test program:
-`Microsoft.NET.Test.Sdk` sets `OutputType` to `Exe` and adds its own generated entry point, which must not be disabled
-(see below).
-
-Useful options:
+`dotnet test` through the Expecto test adapter is the only runner, locally and
+in CI, and it is the same mechanism IDE test explorers use. The adapter
+discovers tests by reflecting over `[<Tests>]` values, so every test list must
+carry the attribute. Expecto settings pass through with an `Expecto.` prefix
+after `--`; `--filter` and `--list-tests` work as usual:
 
 ```bash
-dotnet test server/__PROJECT_NAME__.slnx --list-tests
-dotnet test server/__PROJECT_NAME__.slnx --filter "FullyQualifiedName~Todo"
-dotnet test server/__PROJECT_NAME__.slnx -- Expecto.parallel=false   # Expecto settings, `Expecto.`-prefixed
+dotnet test server/LustreTodos.slnx --list-tests
+dotnet test server/LustreTodos.slnx --filter "FullyQualifiedName~Todo"
+dotnet test server/LustreTodos.slnx -- Expecto.parallel=false
 ```
 
-### Don't set `GenerateProgramFile` to `false`
-
-`Microsoft.NET.Test.Sdk` sets `OutputType=Exe` and, unless the project declares its own `Program.fs`, adds a generated
-entry point. Suppressing that entry point leaves the F# assembly without one, and Expecto's discovery then reads every
-`[<Tests>]` value as `null`, failing the run with:
+The test project has no entry point of its own: the test SDK generates one. Do
+not disable it (`GenerateProgramFile`); without an entry point the F# assembly
+is not initialised and every test is discovered as `null`:
 
 ```
 Test is null. Assembly may not be initialized. Consider adding an [<EntryPoint>] or making it a library/classlib.
 ```
-
-## Test Cases
-
-The example domain (todos) covers the following CRUD test patterns:
-
-| Method | Endpoint               | Asserts                     |
-| ------ | ---------------------- | --------------------------- |
-| GET    | `/api/todos`           | 200, `[]`                   |
-| GET    | `/api/todos` (seeded)  | 200, seeded item present    |
-| GET    | `/api/todos/{id}`      | 200, matches seeded item    |
-| GET    | `/api/todos/{id}`      | 404                         |
-| POST   | `/api/todos`           | 201, matches input          |
-| PATCH  | `/api/todos/{id}`      | 200, reflects changes       |
-| DELETE | `/api/todos/{id}`      | 204, 404 on re-GET          |
-| DELETE | `/api/todos/completed` | 204, incomplete-only remain |
