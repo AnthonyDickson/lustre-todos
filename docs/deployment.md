@@ -7,9 +7,9 @@ just publish                    # linux-x64 (default)
 RUNTIME=osx-arm64 just publish  # macOS Apple Silicon
 ```
 
-Builds the client Vite bundle, copies it into `server/src/__PROJECT_NAME__.Server/wwwroot/`,
+Builds the client Vite bundle, copies it into `server/src/LustreTodos/wwwroot/`,
 then publishes the server as a self-contained single-file binary with trimming.
-Output: `server/src/__PROJECT_NAME__.Server/bin/Release/publish/`
+Output: `server/src/LustreTodos/bin/Release/publish/`
 
 ## Publishing via Docker
 
@@ -17,11 +17,11 @@ Output: `server/src/__PROJECT_NAME__.Server/bin/Release/publish/`
 
 ```bash
 # Build
-docker build -t ghcr.io/your-org/__PROJECT_KEBAB__:latest .
+docker build -t ghcr.io/your-org/lustre-todos:latest .
 # Login, e.g. with a GitHub Personal Access Token with the `write:packages` permissions
 cat $MY_PAT | docker login ghcr.io -u $(gh api user --jq .login) --password-stdin
 # Push
-docker push ghcr.io/your-org/__PROJECT_KEBAB__:latest
+docker push ghcr.io/your-org/lustre-todos:latest
 ```
 
 The multi-stage `Dockerfile` installs Node.js and Gleam, builds the client, then
@@ -58,8 +58,8 @@ The example compose file ships with dev OIDC defaults. Override for production:
 
 ```bash
 Oidc__Authority=https://auth.example.com \
-Oidc__ClientId=__PROJECT_KEBAB__ \
-Oidc__ClientSecret="$(pass show oidc/__PROJECT_KEBAB__/client-secret)" \
+Oidc__ClientId=lustre-todos \
+Oidc__ClientSecret="$(pass show oidc/lustre-todos/client-secret)" \
 Oidc__CallbackPath=/signin-oidc \
 Login__ReturnUrl=https://app.example.com/ \
   docker compose -f docker-compose.prod.yml up -d
@@ -130,7 +130,7 @@ first without falling back.
 `client/public/`. Vite serves them at root in dev and copies them into `dist/`
 on build. They reach the server via `just copy-client-dist`.
 
-**Server-only assets** (e.g. `robots.txt`) live in `server/src/__PROJECT_NAME__.Server/wwwroot/`.
+**Server-only assets** (e.g. `robots.txt`) live in `server/src/LustreTodos/wwwroot/`.
 The `wwwroot/` directory is gitignored and populated by `copy-client-dist` during
 publish. Persistent server assets should have their source of truth elsewhere
 (e.g. a build step that copies them in).

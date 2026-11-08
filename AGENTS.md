@@ -31,7 +31,7 @@ just publish                    # linux-x64 (default)
 just publish RUNTIME=osx-arm64  # macOS Apple Silicon
 ```
 
-This builds the client, copies it into the server's `wwwroot/`, then publishes the server as a self-contained single-file binary with trimming. The output is at `server/src/__PROJECT_NAME__.Server/bin/Release/publish/`.
+This builds the client, copies it into the server's `wwwroot/`, then publishes the server as a self-contained single-file binary with trimming. The output is at `server/src/LustreTodos/bin/Release/publish/`.
 
 ### Database Commands
 
@@ -51,7 +51,7 @@ F# compiles server files in the order listed in `.fsproj`. **New files must be i
 
 ```
 server/
-  __PROJECT_NAME__.slnx                # XML-based solution format
+  LustreTodos.slnx                # XML-based solution format
   Directory.Build.props               # Enables Central Package Management
   Directory.Packages.props            # All NuGet package versions
   global.json                         # .NET SDK version
@@ -63,8 +63,8 @@ server/
   scripts/
     migrate.fsx                       # Standalone DbUp migration runner
   src/
-    __PROJECT_NAME__.Server/
-      __PROJECT_NAME__.Server.fsproj  # Project file
+    LustreTodos/
+      LustreTodos.fsproj  # Project file
       packages.lock.json              # Locked dependency graph
       appsettings.Development.json    # Dev environment config
       Shared/                         # Cross-cutting modules: errors, auth, config, JSON, OpenAPI, logging
@@ -225,13 +225,13 @@ fn update_with_effect(model, msg) -> #(Model, lustre_effect.Effect(Msg)) {
 
 ### Tests
 
-Three layers: server Expecto tests through the Expecto test adapter (`just server-test`, i.e. `dotnet test server/__PROJECT_NAME__.slnx`, ephemeral SQLite, no auth), client gleeunit tests (`just client-test`, pure `update` unit tests, no browser), and E2E Playwright tests (`just e2e-test`, full stack in Docker Compose with Authelia). E2E tests use `data-testid` attributes for selectors — add them to feature page views when new interactive elements are introduced.
+Three layers: server Expecto tests through the Expecto test adapter (`just server-test`, i.e. `dotnet test server/LustreTodos.slnx`, ephemeral SQLite, no auth), client gleeunit tests (`just client-test`, pure `update` unit tests, no browser), and E2E Playwright tests (`just e2e-test`, full stack in Docker Compose with Authelia). E2E tests use `data-testid` attributes for selectors — add them to feature page views when new interactive elements are introduced.
 
 ### Static Assets
 
 **Client assets** (images, fonts, favicons, PDFs — anything the SPA references) live in `client/public/`. Vite serves them at root in dev and copies them into `dist/` on build. They reach the server via `just copy-client-dist`.
 
-**Server-only assets** (e.g. `robots.txt` that should exist regardless of the client bundle) live in `server/src/__PROJECT_NAME__.Server/wwwroot/`. Note that `wwwroot/` is gitignored and recreated by `copy-client-dist`, so the source of truth for any persisted file must live elsewhere (or use a build step).
+**Server-only assets** (e.g. `robots.txt` that should exist regardless of the client bundle) live in `server/src/LustreTodos/wwwroot/`. Note that `wwwroot/` is gitignored and recreated by `copy-client-dist`, so the source of truth for any persisted file must live elsewhere (or use a build step).
 
 ## Code Style & Conventions
 

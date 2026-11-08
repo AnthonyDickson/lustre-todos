@@ -83,13 +83,6 @@ for f in $TEXT_FILES; do
     if grep -qFI "$OLD_SNAKE" "$f" 2>/dev/null; then
         sed -i "s|${OLD_SNAKE}|${NEW_SNAKE}|g" "$f"
     fi
-    # Documentation tokens
-    if grep -qFI '__PROJECT_NAME__' "$f" 2>/dev/null; then
-        sed -i "s|__PROJECT_NAME__|${NEW_PASCAL}|g" "$f"
-    fi
-    if grep -qFI '__PROJECT_KEBAB__' "$f" 2>/dev/null; then
-        sed -i "s|__PROJECT_KEBAB__|${NEW_KEBAB}|g" "$f"
-    fi
 done
 
 # ── 2. Rename .fsproj and .slnx files ──────────────────────────────────────
