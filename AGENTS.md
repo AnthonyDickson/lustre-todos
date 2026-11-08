@@ -116,6 +116,8 @@ Environment config via `Oidc:Authority`, `Oidc:ClientId`, `Oidc:ClientSecret`, `
 
 ### Vertical Slice Architecture (example: `Feature/Todo/`)
 
+The rules behind the layout (dependency direction, refined types, DTOs, errors, user scoping) are in [docs/architecture.md](docs/architecture.md).
+
 Each feature is a folder under `Feature/`, with one file per HTTP operation (e.g. `CreateTodo.fs`). The template uses a todo domain as an example — replace it with your own slices:
 
 - **Operation modules** — each holds its request type, private queries, `handler`, and an `endpoint` that adds OpenAPI metadata. The `Path` literal is public so tests can build URLs from it.

@@ -67,6 +67,7 @@ Management — versions in `Directory.Packages.props`.
 
 ## Docs
 
+- [Server Architecture](docs/architecture.md)
 - [Client Architecture](docs/client-architecture.md)
 - [Database](docs/database.md)
 - [Dates and Timestamps](docs/dates.md)
