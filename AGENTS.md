@@ -192,7 +192,7 @@ Two-layer MVU:
 
 - `app.gleam` — Entry point + thin shell: routing via custom navigation effects + delegate to feature pages. Effect interpreter wiring.
 - `<feature>_page.gleam` — Full MVC per feature: model, update (pure, returns `Effect` values), view.
-- `effect.gleam` — Custom `Effect` type with 9 variants (`HttpRequest`, `LoadFromStore`, `SaveToStore`, `Redirect`, `After`, `Navigate`, `PushUrl`, `ReplaceUrl`, `Batch`, `None`) + interpreter (`run`) + `map`/`batch`/`none` helpers + thin per-method HTTP constructors (`get`, `post`, `put`, `patch`, `delete`) + navigation constructors. Feature modules only need to import `effect` for everyday effects.
+- `effect.gleam` — Custom `Effect` type (variants in the table below) + interpreter (`run`) + `map`/`batch`/`none` helpers + thin per-method HTTP constructors (`get`, `post`, `put`, `patch`, `delete`) + navigation constructors. Feature modules only need to import `effect` for everyday effects.
 - `http_effect.gleam` — HTTP transport layer. Defines `HttpMethod` and `HttpError` types, exposes `send` / `send_with` (configurable request building). Depends only on stdlib — the extension point for auth headers, retry logic, or custom HTTP methods.
 - `effect_ffi.mjs` — Thin JS wrappers for `window.localStorage`, `window.location.assign`, and client-side navigation (click interception on internal links, popstate listener, `history.pushState`/`replaceState`).
 - `response.gleam` — `decode_success` (2xx body → typed `Result`) and `http_error_to_api_error` (`HttpError` → `ApiError`) helpers.
@@ -212,7 +212,7 @@ The `Effect` type is the cornerstone of the client architecture. Every `update` 
 | `Navigate`           | Click/popstate interception + pushState |
 | `PushUrl/ReplaceUrl` | `history.pushState` / `replaceState`    |
 | `Batch([...])`       | Run multiple effects                    |
-| `None`               | No-op                                   |
+| `NoEffect`           | No-op                                   |
 
 Bridging into Lustre:
 

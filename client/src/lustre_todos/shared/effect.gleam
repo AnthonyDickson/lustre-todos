@@ -42,7 +42,8 @@ pub type Effect(msg) {
   /// This effect does not trigger a page load, therefore it can be batched with other effects.
   ReplaceUrl(url: String)
   Batch(effects: List(Effect(msg)))
-  None
+  /// Does nothing. Named so it does not clash with `option.None`.
+  NoEffect
 }
 
 /// `GET` the given URL.
@@ -277,7 +278,7 @@ pub fn map(effect: Effect(a), f: fn(a) -> b) -> Effect(b) {
     PushUrl(url:) -> PushUrl(url:)
     ReplaceUrl(url:) -> ReplaceUrl(url:)
     Batch(effects:) -> Batch(list.map(effects, fn(e) { map(e, f) }))
-    None -> None
+    NoEffect -> NoEffect
   }
 }
 
@@ -294,7 +295,7 @@ pub fn batch(effects: List(Effect(msg))) -> Effect(msg) {
 /// A no-op effect — produces no messages.
 ///
 pub fn none() -> Effect(msg) {
-  None
+  NoEffect
 }
 
 /// Execute an `Effect` against the real world. This is the single point where
@@ -354,6 +355,6 @@ pub fn run(effect: Effect(msg), dispatch: fn(msg) -> Nil) -> Nil {
       Nil
     }
 
-    None -> Nil
+    NoEffect -> Nil
   }
 }

@@ -77,7 +77,7 @@ app — template consumers signal the shell by adding a variant to
 | `Navigate`           | Click/popstate interception + pushState |
 | `PushUrl/ReplaceUrl` | `history.pushState` / `replaceState`    |
 | `Batch([...])`       | Run multiple effects                    |
-| `None`               | No-op                                   |
+| `NoEffect`           | No-op                                   |
 
 ### Bridging into Lustre
 
