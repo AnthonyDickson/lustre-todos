@@ -21,7 +21,11 @@ module DeleteTodo =
     [<Literal>]
     let Path = "/api/todos/{%O:guid}"
 
-    let private delete (queryContext : QueryContextFactory) (userId : string) (id : Guid) =
+    let private delete
+        (queryContext : QueryContextFactory)
+        (userId : string)
+        (id : Guid)
+        =
         task {
             let! rows =
                 deleteTask queryContext {
@@ -32,7 +36,10 @@ module DeleteTodo =
             return rows > 0
         }
 
-    let private handler (queryContext : QueryContextFactory) (id : Guid) : EndpointHandler =
+    let private handler
+        (queryContext : QueryContextFactory)
+        (id : Guid)
+        : EndpointHandler =
         Endpoint.handler (fun ctx ->
             taskResult {
                 let log = RequestLog.fromContext ctx
@@ -40,10 +47,18 @@ module DeleteTodo =
                 let! deleted = delete queryContext userId id
 
                 if deleted then
-                    log.Info ($"Deleted todo %O{id}", LogProp.prop "todoId" (id.ToString ()))
+                    log.Info (
+                        $"Deleted todo %O{id}",
+                        LogProp.prop "todoId" (id.ToString ())
+                    )
+
                     ctx.SetStatusCode 204
                 else
-                    log.Warn ($"Todo %O{id} not found", LogProp.prop "todoId" (id.ToString ()))
+                    log.Warn (
+                        $"Todo %O{id} not found",
+                        LogProp.prop "todoId" (id.ToString ())
+                    )
+
                     return! Error (NotFound $"Todo %O{id} not found")
             })
 

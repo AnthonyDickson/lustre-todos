@@ -14,12 +14,15 @@ module Login =
         fun ctx ->
             task {
                 let returnUrl =
-                    ctx.TryGetQueryValue ReturnUrlParameter |> ReturnUrl.resolve baseReturnUrl
+                    ctx.TryGetQueryValue ReturnUrlParameter
+                    |> ReturnUrl.resolve baseReturnUrl
 
                 if ctx.User.Identity.IsAuthenticated then
                     ctx.Response.Redirect returnUrl
                 else
-                    let props = AuthenticationProperties (RedirectUri = returnUrl)
+                    let props =
+                        AuthenticationProperties (RedirectUri = returnUrl)
+
                     return! ctx.ChallengeAsync (Auth.oidcScheme, props)
             }
 

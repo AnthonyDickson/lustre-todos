@@ -97,7 +97,9 @@ module RequestLog =
     let fromContext (ctx : HttpContext) =
         match ctx.Items.TryGetValue Key with
         | true, (:? RequestLog as log) -> log
-        | _ -> failwith "RequestLog not found in HttpContext.Items — is the RequestLogging middleware wired?"
+        | _ ->
+            failwith
+                "RequestLog not found in HttpContext.Items — is the RequestLogging middleware wired?"
 
 module Middleware =
     open System.Collections.Generic
@@ -119,7 +121,10 @@ module Middleware =
 
         dict
 
-    let requestLogging (logger : ILogger) (next : RequestDelegate) : RequestDelegate =
+    let requestLogging
+        (logger : ILogger)
+        (next : RequestDelegate)
+        : RequestDelegate =
         RequestDelegate (fun (ctx : HttpContext) ->
             task {
                 let sw = Stopwatch.StartNew ()
@@ -149,13 +154,18 @@ module Middleware =
                                 | _ -> LogLevel.Info)
                             LogLevel.Info
 
-                    let logArray = entries |> List.map (entryToDict >> box) |> List.toArray
+                    let logArray =
+                        entries
+                        |> List.map (entryToDict >> box)
+                        |> List.toArray
 
                     let serilogLevel =
                         match maxLevel with
                         | LogLevel.Error -> Serilog.Events.LogEventLevel.Error
-                        | LogLevel.Warning -> Serilog.Events.LogEventLevel.Warning
-                        | LogLevel.Info -> Serilog.Events.LogEventLevel.Information
+                        | LogLevel.Warning ->
+                            Serilog.Events.LogEventLevel.Warning
+                        | LogLevel.Info ->
+                            Serilog.Events.LogEventLevel.Information
 
                     logger.Write (
                         serilogLevel,

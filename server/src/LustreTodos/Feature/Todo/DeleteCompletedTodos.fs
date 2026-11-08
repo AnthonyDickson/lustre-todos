@@ -19,7 +19,10 @@ module DeleteCompletedTodos =
     [<Literal>]
     let Path = "/api/todos/completed"
 
-    let private deleteCompleted (queryContext : QueryContextFactory) (userId : string) =
+    let private deleteCompleted
+        (queryContext : QueryContextFactory)
+        (userId : string)
+        =
         deleteTask queryContext {
             for t in main.Todos do
                 where (t.Completed && t.UserId = userId)
@@ -32,13 +35,20 @@ module DeleteCompletedTodos =
                 let! userId = Auth.getUserId ctx
                 let! rowsAffected = deleteCompleted queryContext userId
 
-                log.Info ($"Deleted %i{rowsAffected} completed todos", LogProp.prop "count" rowsAffected)
+                log.Info (
+                    $"Deleted %i{rowsAffected} completed todos",
+                    LogProp.prop "count" rowsAffected
+                )
+
                 ctx.SetStatusCode 204
             })
 
     let private configureOperation (op : OpenApiOperation) _ _ =
         op.Summary <- "Delete all completed todos"
-        op.Description <- "Permanently removes all completed todos. Returns 204 on success."
+
+        op.Description <-
+            "Permanently removes all completed todos. Returns 204 on success."
+
         op.Tags <- HashSet [ OpenApiTagReference "Todos" ]
         Task.CompletedTask
 

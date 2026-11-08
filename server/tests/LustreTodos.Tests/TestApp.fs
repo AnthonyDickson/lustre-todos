@@ -16,8 +16,8 @@ open Oxpecker
 module private TestClaims =
     let userId = "test-user"
 
-    /// The header a request can carry to act as a different user against the same database. Used by
-    /// the cross-user scoping tests.
+    /// The header a request can carry to act as a different user against the
+    /// same database. Used by the cross-user scoping tests.
     let header = "X-Test-User"
 
     let principal (userId : string) =
@@ -25,10 +25,13 @@ module private TestClaims =
         ClaimsPrincipal identity
 
 type TestAppConfig = {
-    EndpointProviders : (LustreTodos.Data.Db.QueryContextFactory -> Oxpecker.RoutingTypes.Endpoint list) list
+    EndpointProviders :
+        (LustreTodos.Data.Db.QueryContextFactory
+            -> Oxpecker.RoutingTypes.Endpoint list) list
 }
 
-/// Each `with*` routes a slice's production endpoint list, minus the auth filter.
+/// Each `with*` routes a slice's production endpoint list, minus the auth
+/// filter.
 module TestAppConfig =
     open LustreTodos.Data.Db
     open LustreTodos.Feature.Todo
@@ -47,7 +50,9 @@ module TestAppConfig =
     let withTodos = withEndpoints TodoEndpoints.all
 
     let withResetUserData =
-        withEndpoints (fun queryContext -> [ DELETE [ ResetUserData.endpoint queryContext ] ])
+        withEndpoints (fun queryContext -> [
+            DELETE [ ResetUserData.endpoint queryContext ]
+        ])
 
 type TestApp = {
     Client : HttpClient
@@ -63,16 +68,19 @@ module TestApp =
     open LustreTodos.Data.Db
     open LustreTodos.Shared.RequestLogging
 
-    /// Serialises request-log dumps across concurrent tests so their output can't interleave.
+    /// Serialises request-log dumps across concurrent tests so their output
+    /// can't interleave.
     let private dumpLock = obj ()
 
-    /// Messages can embed full stack traces; keep just the first line for readability.
+    /// Messages can embed full stack traces; keep just the first line for
+    /// readability.
     let private firstLine (message : string) =
         let idx = message.IndexOf '\n'
         if idx >= 0 then message.Substring (0, idx) else message
 
-    /// Print the buffered request log to stderr, so a failing test shows the real server-side error
-    /// (e.g. the SQLite exception) instead of an opaque 500 body.
+    /// Print the buffered request log to stderr, so a failing test shows the
+    /// real server-side error (e.g. the SQLite exception) instead of an opaque
+    /// 500 body.
     let private dumpRequestLog (ctx : HttpContext) =
         let entries = (RequestLog.fromContext ctx).Entries
 
@@ -89,12 +97,12 @@ module TestApp =
                 let level = LogLevel.toString entry.Level
                 sb.AppendLine $"  [{level}] {firstLine entry.Message}" |> ignore
 
-            // Write the whole block in one call under a lock so concurrent requests can't interleave
-            // their output mid-line.
+            // Write the whole block in one call under a lock so concurrent
+            // requests can't interleave their output mid-line.
             lock dumpLock (fun () -> eprintf "%s" (sb.ToString ()))
 
-    /// The `sub` claim to authenticate a request as: the `X-Test-User` header when present, otherwise
-    /// the default test user.
+    /// The `sub` claim to authenticate a request as: the `X-Test-User` header
+    /// when present, otherwise the default test user.
     let private requestUser (ctx : HttpContext) =
         let header = ctx.Request.Headers[TestClaims.header]
 
@@ -105,14 +113,16 @@ module TestApp =
 
     /// Create an app server with an in-memory SQLite database
     let create (config : TestAppConfig) =
-        // In-memory database shared by every connection through SQLite's shared cache. The keeper
-        // connection must stay open for the lifetime of the app — the in-memory DB is dropped when
-        // the last connection to it closes. Each query opens its own connection, so disposing a
+        // In-memory database shared by every connection through SQLite's shared
+        // cache. The keeper connection must stay open for the lifetime of the
+        // app — the in-memory DB is dropped when the last connection to it
+        // closes. Each query opens its own connection, so disposing a
         // QueryContext (which closes its connection) doesn't lose the data.
         let name = $"test-{Guid.NewGuid ()}"
 
         let connectionString =
-            LustreTodos.Shared.Config.Config.withForeignKeys $"Data Source=file:{name}?mode=memory&cache=shared"
+            LustreTodos.Shared.Config.Config.withForeignKeys
+                $"Data Source=file:{name}?mode=memory&cache=shared"
 
         let keeper = new SqliteConnection (connectionString)
         keeper.Open ()
@@ -120,13 +130,16 @@ module TestApp =
         let queryContext = QueryContextFactory.Create connectionString
 
         let endpoints =
-            config.EndpointProviders |> Seq.collect (fun provider -> provider queryContext)
+            config.EndpointProviders
+            |> Seq.collect (fun provider -> provider queryContext)
 
         let result =
             DbUp.DeployChanges.To
                 .SqliteDatabase(connectionString)
                 // The migration scripts are embedded in the server assembly.
-                .WithScriptsEmbeddedInAssembly(typeof<QueryContextFactory>.Assembly)
+                .WithScriptsEmbeddedInAssembly(
+                    typeof<QueryContextFactory>.Assembly
+                )
                 .WithTransactionPerScript()
                 .Build()
                 .PerformUpgrade ()
@@ -139,20 +152,30 @@ module TestApp =
                 .ConfigureWebHost(fun webHostBuilder ->
                     webHostBuilder
                         .UseTestServer()
-                        .ConfigureServices(fun services -> services.AddRouting().AddOxpecker () |> ignore)
+                        .ConfigureServices(fun services ->
+                            services.AddRouting().AddOxpecker () |> ignore)
                         .Configure (fun app ->
-                            app.Use (fun (ctx : HttpContext) (next : Func<Task>) ->
-                                task {
-                                    ctx.Items[RequestLog.Key] <- RequestLog ()
-                                    ctx.User <- TestClaims.principal (requestUser ctx)
+                            app.Use
+                                (fun (ctx : HttpContext) (next : Func<Task>) ->
+                                    task {
+                                        ctx.Items[RequestLog.Key] <-
+                                            RequestLog ()
 
-                                    try
-                                        return! next.Invoke ()
-                                    finally
-                                        if ctx.Response.StatusCode >= 500 then
-                                            dumpRequestLog ctx
-                                }
-                                :> Task)
+                                        ctx.User <-
+                                            TestClaims.principal (
+                                                requestUser ctx
+                                            )
+
+                                        try
+                                            return! next.Invoke ()
+                                        finally
+                                            if
+                                                ctx.Response.StatusCode
+                                                >= 500
+                                            then
+                                                dumpRequestLog ctx
+                                    }
+                                    :> Task)
                             |> ignore
 
                             app.UseRouting().UseOxpecker endpoints |> ignore)

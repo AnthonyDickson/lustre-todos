@@ -9,8 +9,8 @@ open LustreTodos.Shared.DomainError
 open LustreTodos.Shared.RequestLogging
 open LustreTodos.Shared.Json
 
-/// <summary>Maps <c>Task&lt;Result&lt;unit, DomainError&gt;&gt;</c> results into HTTP responses
-/// suitable for Oxpecker endpoint handlers.</summary>
+/// <summary>Maps <c>Task&lt;Result&lt;unit, DomainError&gt;&gt;</c> results
+/// into HTTP responses suitable for Oxpecker endpoint handlers.</summary>
 [<RequireQualifiedAccess>]
 module Endpoint =
     let private errorTypeName (err : DomainError) =
@@ -22,8 +22,8 @@ module Endpoint =
         | DatabaseError _ -> "DatabaseError"
         | UnhandledException _ -> "UnhandledException"
 
-    /// Run the handler, turning the exceptions it raises into errors, so handlers and their queries
-    /// need no exception handling of their own.
+    /// Run the handler, turning the exceptions it raises into errors, so
+    /// handlers and their queries need no exception handling of their own.
     let private runCatching
         (log : RequestLog)
         (handler_fun : HttpContext -> Task<Result<unit, DomainError>>)
@@ -34,17 +34,26 @@ module Endpoint =
                 return! handler_fun ctx
             with
             | :? SqliteException as exn when exn.SqliteErrorCode = 19 ->
-                log.Warn ($"Unhandled constraint violation: {exn.Message}", LogProp.prop "exception" (exn.ToString ()))
+                log.Warn (
+                    $"Unhandled constraint violation: {exn.Message}",
+                    LogProp.prop "exception" (exn.ToString ())
+                )
 
                 return Error (Conflict exn)
             | :? SqliteException as exn -> return Error (DatabaseError exn)
             // Kestrel throws this when a body passes the endpoint's size limit.
             | :? BadHttpRequestException as exn when exn.StatusCode = 413 ->
-                return Error (ValidationFailed "The request is larger than the server accepts. Send less at a time.")
+                return
+                    Error (
+                        ValidationFailed
+                            "The request is larger than the server accepts. Send less at a time."
+                    )
             | exn -> return Error (UnhandledException exn)
         }
 
-    let handler (handler_fun : HttpContext -> Task<Result<unit, DomainError>>) : (HttpContext -> Task) =
+    let handler
+        (handler_fun : HttpContext -> Task<Result<unit, DomainError>>)
+        : (HttpContext -> Task) =
         fun (ctx : HttpContext) ->
             task {
                 let log = RequestLog.fromContext ctx
@@ -69,7 +78,9 @@ module Endpoint =
                             RequestId = ctx.TraceIdentifier
                         }
                 | Error Unauthorised ->
-                    log.Error "Got a request where the user claims were not defined"
+                    log.Error
+                        "Got a request where the user claims were not defined"
+
                     ctx.Response.StatusCode <- 401
 
                     return!
@@ -80,7 +91,12 @@ module Endpoint =
                             RequestId = ctx.TraceIdentifier
                         }
                 | Error (NotFound err) ->
-                    log.Warn ($"Not found: {err}", LogProp.prop "errorType" "NotFound", LogProp.prop "error" err)
+                    log.Warn (
+                        $"Not found: {err}",
+                        LogProp.prop "errorType" "NotFound",
+                        LogProp.prop "error" err
+                    )
+
                     ctx.Response.StatusCode <- 404
 
                     return!

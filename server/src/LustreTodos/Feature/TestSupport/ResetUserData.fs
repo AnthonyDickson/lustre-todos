@@ -24,7 +24,10 @@ module ResetUserData =
         "SELECT m.name FROM sqlite_master m JOIN pragma_table_info(m.name) c "
         + "WHERE m.type = 'table' AND c.name = 'UserId'"
 
-    let private deleteAll (queryContext : QueryContextFactory) (userId : string) : Task<unit> =
+    let private deleteAll
+        (queryContext : QueryContextFactory)
+        (userId : string)
+        : Task<unit> =
         task {
             use! ctx = queryContext.OpenContextAsync ()
             let conn = ctx.Connection
@@ -47,7 +50,8 @@ module ResetUserData =
                 use cmd = conn.CreateCommand ()
                 cmd.Transaction <- tx
                 // The table name comes from the schema, not the request.
-                cmd.CommandText <- $"DELETE FROM \"{table}\" WHERE UserId = $userId"
+                cmd.CommandText <-
+                    $"DELETE FROM \"{table}\" WHERE UserId = $userId"
 
                 let param = cmd.CreateParameter ()
                 param.ParameterName <- "$userId"
@@ -70,4 +74,5 @@ module ResetUserData =
                 return ()
             })
 
-    let endpoint (queryContext : QueryContextFactory) = route Path (handler queryContext)
+    let endpoint (queryContext : QueryContextFactory) =
+        route Path (handler queryContext)

@@ -27,9 +27,14 @@ module ResetUserDataTests =
                 CreatedAt = DateTimeOffset.UtcNow
             }
 
-            let! created = TestHttp.postJson client CreateTodo.Path request |> Async.AwaitTask
+            let! created =
+                TestHttp.postJson client CreateTodo.Path request
+                |> Async.AwaitTask
 
-            Expect.equal created.StatusCode HttpStatusCode.Created "seeding a todo should return 201"
+            Expect.equal
+                created.StatusCode
+                HttpStatusCode.Created
+                "seeding a todo should return 201"
         }
 
     let private todoCount (client : HttpClient) =
@@ -42,16 +47,21 @@ module ResetUserDataTests =
     [<Tests>]
     let tests =
         testList "ResetUserData" [
-            testCaseAsync "clears the current user's data and leaves other users' data"
+            testCaseAsync
+                "clears the current user's data and leaves other users' data"
             <| async {
                 use app = newApp ()
                 use otherUser = app.ClientForUser "other-user"
                 do! seed app.Client
                 do! seed otherUser
 
-                let! response = app.Client.DeleteAsync ResetUserData.Path |> Async.AwaitTask
+                let! response =
+                    app.Client.DeleteAsync ResetUserData.Path |> Async.AwaitTask
 
-                Expect.equal response.StatusCode HttpStatusCode.NoContent "reset should return 204"
+                Expect.equal
+                    response.StatusCode
+                    HttpStatusCode.NoContent
+                    "reset should return 204"
 
                 let! count = todoCount app.Client
                 Expect.equal count 0 "the user's todos should be deleted"

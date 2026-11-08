@@ -24,7 +24,10 @@ module ReturnUrlTests =
             <| fun () ->
                 Expect.equal (ReturnUrl.resolve baseUrl None) baseUrl "no page"
 
-                Expect.equal (ReturnUrl.resolve baseUrl (Some "")) baseUrl "an empty page"
+                Expect.equal
+                    (ReturnUrl.resolve baseUrl (Some ""))
+                    baseUrl
+                    "an empty page"
 
             testCase "a login never returns to another site"
             <| fun () ->

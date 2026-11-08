@@ -4,12 +4,14 @@ open System
 
 open LustreTodos.Shared.DomainError
 
-/// <summary>A todo's title: trimmed, non-empty, and at most <c>MaxLength</c> characters. The case is
-/// private, so <c>create</c> is the only way to make one.</summary>
+/// <summary>A todo's title: trimmed, non-empty, and at most <c>MaxLength</c>
+/// characters. The case is private, so <c>create</c> is the only way to make
+/// one.</summary>
 type TodoTitle = private TodoTitle of string
 
 module TodoTitle =
-    /// <summary>Shared by the validation below and the request types' OpenAPI annotations.</summary>
+    /// <summary>Shared by the validation below and the request types' OpenAPI
+    /// annotations.</summary>
     [<Literal>]
     let MaxLength = 256
 
@@ -38,8 +40,8 @@ module TodoTitle =
 
     let value (TodoTitle title) = title
 
-    /// <summary>Skips validation, for values read back from the database, which were validated on
-    /// write.</summary>
+    /// <summary>Skips validation, for values read back from the database, which
+    /// were validated on write.</summary>
     let internal unsafeFromString title = TodoTitle title
 
 type Todo = {

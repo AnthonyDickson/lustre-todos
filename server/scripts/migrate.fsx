@@ -31,7 +31,8 @@ let result =
     DeployChanges.To
         .SqliteDatabase(connectionString)
         .WithScripts(scripts)
-        // A script that fails partway leaves the schema as it was, as in the server.
+        // A script that fails partway leaves the schema as it was, as in the
+        // server.
         .WithTransactionPerScript()
         .LogToConsole()
         .Build()

@@ -143,9 +143,10 @@ Each rule is explained in the linked doc.
 
 ## Code Style
 
-- **Formatting** (fantomas via `.editorconfig`): Stroustrup bracket style;
-  spaces before parameters/colons/invocations; space after commas and
-  semicolons, not before.
+- **Formatting** (fantomas via `.editorconfig`): 80 columns; Stroustrup bracket
+  style; spaces before parameters/colons/invocations; space after commas and
+  semicolons, not before. Fantomas does not wrap comments, so wrap them at 80 by
+  hand.
 - **Naming**: PascalCase modules matching filenames; camelCase functions;
   PascalCase types (records/DUs); `[<RequireQualifiedAccess>]` on modules
   exposing a type alias.

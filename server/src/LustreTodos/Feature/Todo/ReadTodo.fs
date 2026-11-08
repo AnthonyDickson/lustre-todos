@@ -22,7 +22,11 @@ module ReadTodo =
     [<Literal>]
     let Path = "/api/todos/{%O:guid}"
 
-    let private get (queryContext : QueryContextFactory) (userId : string) (id : Guid) =
+    let private get
+        (queryContext : QueryContextFactory)
+        (userId : string)
+        (id : Guid)
+        =
         task {
             let! result =
                 selectTask queryContext {
@@ -34,7 +38,10 @@ module ReadTodo =
             return result |> Option.map TodoCodec.fromRow
         }
 
-    let private handler (queryContext : QueryContextFactory) (id : Guid) : EndpointHandler =
+    let private handler
+        (queryContext : QueryContextFactory)
+        (id : Guid)
+        : EndpointHandler =
         Endpoint.handler (fun ctx ->
             taskResult {
                 let! userId = Auth.getUserId ctx
@@ -43,10 +50,18 @@ module ReadTodo =
 
                 match todo with
                 | Some item ->
-                    log.Info ($"Returned todo %O{id}", LogProp.prop "todoId" (id.ToString ()))
+                    log.Info (
+                        $"Returned todo %O{id}",
+                        LogProp.prop "todoId" (id.ToString ())
+                    )
+
                     do! Json.write ctx (TodoResponse.fromDomain item)
                 | None ->
-                    log.Warn ($"Todo %O{id} not found", LogProp.prop "todoId" (id.ToString ()))
+                    log.Warn (
+                        $"Todo %O{id} not found",
+                        LogProp.prop "todoId" (id.ToString ())
+                    )
+
                     return! Error (NotFound $"Todo %O{id} not found")
             })
 

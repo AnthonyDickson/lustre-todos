@@ -24,9 +24,9 @@ type OidcConfig = {
 
     ValidAudiences : string array
 
-    /// <summary>The provider's logout page, which <c>/logout</c> redirects to so the provider
-    /// session ends with the app's. Optional: without it the next sign in skips the provider's
-    /// login form.</summary>
+    /// <summary>The provider's logout page, which <c>/logout</c> redirects to
+    /// so the provider session ends with the app's. Optional: without it the
+    /// next sign in skips the provider's login form.</summary>
     [<Url>]
     LogoutUrl : string
 }
@@ -52,9 +52,9 @@ type LoginConfig = {
 [<CLIMutable>]
 type LoggingConfig = { FilePath : string }
 
-/// <summary>Where ASP.NET Core Data Protection keeps the keys that encrypt the auth cookie. Without it
-/// the keys live in the user profile, which a container loses when it is recreated, signing every user
-/// out.</summary>
+/// <summary>Where ASP.NET Core Data Protection keeps the keys that encrypt the
+/// auth cookie. Without it the keys live in the user profile, which a container
+/// loses when it is recreated, signing every user out.</summary>
 [<CLIMutable>]
 type DataProtectionConfig = {
     [<Required>]
@@ -94,19 +94,31 @@ module Config =
         (config : IConfiguration)
         (sectionName : string)
         =
-        services.AddOptions<'T>().Bind(config.GetSection sectionName).ValidateDataAnnotations().ValidateOnStart ()
+        services
+            .AddOptions<'T>()
+            .Bind(config.GetSection sectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart ()
         |> ignore
 
-    /// Raises `OptionsValidationException` for missing or invalid config entries.
+    /// Raises `OptionsValidationException` for missing or invalid config
+    /// entries.
     let private read<'T when 'T : not struct and 'T : (new : unit -> 'T)>
         (config : IConfiguration)
         (sectionName : string)
         : 'T =
         let section = config.GetSection sectionName
 
-        // `Get` returns null for an absent section, which the validator rejects with an exception.
+        // `Get` returns null for an absent section, which the validator rejects
+        // with an exception.
         if not (section.Exists ()) then
-            raise (OptionsValidationException (sectionName, typeof<'T>, [ $"{sectionName} is required" ]))
+            raise (
+                OptionsValidationException (
+                    sectionName,
+                    typeof<'T>,
+                    [ $"{sectionName} is required" ]
+                )
+            )
 
         let value = section.Get<'T> ()
         let validator = DataAnnotationValidateOptions<'T> Options.DefaultName
@@ -115,20 +127,31 @@ module Config =
         if result.Succeeded then
             value
         else
-            raise (OptionsValidationException (sectionName, typeof<'T>, result.Failures))
+            raise (
+                OptionsValidationException (
+                    sectionName,
+                    typeof<'T>,
+                    result.Failures
+                )
+            )
 
-    let private sectionExists (config : IConfiguration) (name : string) = (config.GetSection name).Exists ()
+    let private sectionExists (config : IConfiguration) (name : string) =
+        (config.GetSection name).Exists ()
 
-    /// <summary>Enforce foreign keys on every connection opened with the connection string. SQLite
-    /// enforces them per connection, so the setting belongs in the connection string rather than a
-    /// one-off <c>PRAGMA</c>. The bundled e_sqlite3 build already defaults to on; this keeps the
+    /// <summary>Enforce foreign keys on every connection opened with the
+    /// connection string. SQLite enforces them per connection, so the setting
+    /// belongs in the connection string rather than a one-off <c>PRAGMA</c>.
+    /// The bundled e_sqlite3 build already defaults to on; this keeps the
     /// guarantee independent of the native library's build flags.</summary>
     let withForeignKeys (connectionString : string) =
-        SqliteConnectionStringBuilder (connectionString, ForeignKeys = Nullable true)
+        SqliteConnectionStringBuilder (
+            connectionString,
+            ForeignKeys = Nullable true
+        )
         |> string
 
-    /// Raises `OptionsValidationException` when the connection string is missing, rather than
-    /// letting SQLite open a temporary database.
+    /// Raises `OptionsValidationException` when the connection string is
+    /// missing, rather than letting SQLite open a temporary database.
     let private readConnectionString (config : IConfiguration) =
         match config.GetConnectionString ConnectionName with
         | null
@@ -142,8 +165,12 @@ module Config =
             )
         | connectionString -> withForeignKeys connectionString
 
-    /// Raises `OptionsValidationException` for missing or invalid config entries.
-    let load (services : IServiceCollection) (config : IConfiguration) : AppConfig =
+    /// Raises `OptionsValidationException` for missing or invalid config
+    /// entries.
+    let load
+        (services : IServiceCollection)
+        (config : IConfiguration)
+        : AppConfig =
         register<OidcConfig> services config OidcSectionName
         register<LoginConfig> services config LoginSectionName
         register<LoggingConfig> services config LoggingSectionName
@@ -160,7 +187,8 @@ module Config =
             Oidc = read config OidcSectionName
             Oauth2 = oauthOptions
             Login = read config LoginSectionName
-            // Every setting in the section is optional, so an absent section means console logging only.
+            // Every setting in the section is optional, so an absent section
+            // means console logging only.
             Logging =
                 if sectionExists config LoggingSectionName then
                     read config LoggingSectionName

@@ -39,7 +39,11 @@ module ReadAllTodos =
                 let! items = getAll queryContext userId
                 let log = RequestLog.fromContext ctx
 
-                log.Info ($"Returned %i{List.length items} todos", LogProp.prop "count" (List.length items))
+                log.Info (
+                    $"Returned %i{List.length items} todos",
+                    LogProp.prop "count" (List.length items)
+                )
+
                 do! Json.write ctx (List.map TodoResponse.fromDomain items)
             })
 

@@ -1,7 +1,7 @@
 namespace LustreTodos.Feature.Todo
 
-/// <summary>Maps between the <c>Todos</c> row and the domain type. Rows are trusted, so reading one
-/// does not validate it again.</summary>
+/// <summary>Maps between the <c>Todos</c> row and the domain type. Rows are
+/// trusted, so reading one does not validate it again.</summary>
 module TodoCodec =
     open LustreTodos.Data
     open LustreTodos.Data.Db

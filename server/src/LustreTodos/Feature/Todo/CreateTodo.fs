@@ -20,10 +20,12 @@ module CreateTodo =
     open LustreTodos.Shared.Json
     open LustreTodos.Shared.RequestLogging
 
-    /// <summary>Payload for creating a todo. The client chooses the ID and creation time, so it can show
-    /// the todo before the server responds.</summary>
+    /// <summary>Payload for creating a todo. The client chooses the ID and
+    /// creation time, so it can show the todo before the server
+    /// responds.</summary>
     type CreateTodoRequest = {
-        /// <summary>Unique identifier for the todo item, preferably a v7 UUID.</summary>
+        /// <summary>Unique identifier for the todo item, preferably a v7
+        /// UUID.</summary>
         Id : Guid
 
         /// <summary>The title or description of the todo.</summary>
@@ -41,10 +43,14 @@ module CreateTodo =
     [<Literal>]
     let Path = "/api/todos"
 
-    /// <summary>Verify that no todo has the given ID (the primary key). The key spans every user, so
-    /// unlike other queries this one does not filter by user: an ID taken by another user would
-    /// otherwise pass the check and fail the insert.</summary>
-    let private requireIdIsAvailable (queryContext : QueryContextFactory) (id : Guid) =
+    /// <summary>Verify that no todo has the given ID (the primary key). The key
+    /// spans every user, so unlike other queries this one does not filter by
+    /// user: an ID taken by another user would otherwise pass the check and
+    /// fail the insert.</summary>
+    let private requireIdIsAvailable
+        (queryContext : QueryContextFactory)
+        (id : Guid)
+        =
         task {
             let! rowCount =
                 selectTask queryContext {
@@ -57,10 +63,16 @@ module CreateTodo =
                 if rowCount = 0 then
                     Ok ()
                 else
-                    Error (ConstraintError $"A todo with ID %O{id} already exists")
+                    Error (
+                        ConstraintError $"A todo with ID %O{id} already exists"
+                    )
         }
 
-    let private insert (queryContext : QueryContextFactory) (userId : string) (todo : Todo) =
+    let private insert
+        (queryContext : QueryContextFactory)
+        (userId : string)
+        (todo : Todo)
+        =
         task {
             let! _ =
                 insertTask queryContext {
@@ -86,17 +98,28 @@ module CreateTodo =
                     CreatedAt = req.CreatedAt
                 }
 
-                do! Constraints.requireOne (requireIdIsAvailable queryContext todo.Id)
+                do!
+                    Constraints.requireOne (
+                        requireIdIsAvailable queryContext todo.Id
+                    )
 
                 let! () = insert queryContext userId todo
-                log.Info ($"Created todo %O{todo.Id}", LogProp.prop "todoId" (todo.Id.ToString ()))
+
+                log.Info (
+                    $"Created todo %O{todo.Id}",
+                    LogProp.prop "todoId" (todo.Id.ToString ())
+                )
+
                 ctx.SetStatusCode 201
                 do! Json.write ctx (TodoResponse.fromDomain todo)
             })
 
     let private configureOperation (op : OpenApiOperation) _ _ =
         op.Summary <- "Create a todo"
-        op.Description <- "Creates a new todo item and returns it with status 201."
+
+        op.Description <-
+            "Creates a new todo item and returns it with status 201."
+
         op.Tags <- HashSet [ OpenApiTagReference "Todos" ]
         Task.CompletedTask
 

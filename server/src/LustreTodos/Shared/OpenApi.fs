@@ -3,36 +3,42 @@ namespace LustreTodos.Shared.OpenApi
 open System
 
 /// <summary>
-/// Declarative hints describing how a refined or constrained value is represented on the wire.
-/// A hint is applied to an OpenAPI schema by <see cref="OpenApi.SchemaHintTransformer"/>; the
-/// annotated field stays a primitive, so decoding is unaffected.
+/// Declarative hints describing how a refined or constrained value is
+/// represented on the wire. A hint is applied to an OpenAPI schema by <see
+/// cref="OpenApi.SchemaHintTransformer"/>; the annotated field stays a
+/// primitive, so decoding is unaffected.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Prefer the native <c>System.ComponentModel.DataAnnotations</c> attributes wherever they express
-/// the constraint: ASP.NET Core maps them onto JSON Schema keywords for free. Avoid
-/// <c>[&lt;Required&gt;]</c> on F# records - see <see cref="OpenApi.FSharpRecordSchemaTransformer"/>.
+/// Prefer the native <c>System.ComponentModel.DataAnnotations</c> attributes
+/// wherever they express the constraint: ASP.NET Core maps them onto JSON
+/// Schema keywords for free. Avoid <c>[&lt;Required&gt;]</c> on F# records -
+/// see <see cref="OpenApi.FSharpRecordSchemaTransformer"/>.
 /// </para>
 /// <para>
-/// Use <see cref="SchemaHint.EnumAttribute"/> to document a string enum derived from an F# union's
-/// cases, and <see cref="SchemaHint.NumberAttribute"/> for a minimum-only boundary or
-/// <c>multipleOf</c> that <c>[&lt;Range&gt;]</c> cannot express. Hints document only; they do not
-/// validate, so keep them in step with the domain invariants.
+/// Use <see cref="SchemaHint.EnumAttribute"/> to document a string enum derived
+/// from an F# union's cases, and <see cref="SchemaHint.NumberAttribute"/> for a
+/// minimum-only boundary or <c>multipleOf</c> that <c>[&lt;Range&gt;]</c>
+/// cannot express. Hints document only; they do not validate, so keep them in
+/// step with the domain invariants.
 /// </para>
 /// <para>
-/// See <c>docs/openapi.md</c> for the native attribute reference, the full guidance, and future
-/// migrations (e.g. the F# union transformer in Oxpecker.OpenApi PR #98) and alternatives.
+/// See <c>docs/openapi.md</c> for the native attribute reference, the full
+/// guidance, and future migrations (e.g. the F# union transformer in
+/// Oxpecker.OpenApi PR #98) and alternatives.
 /// </para>
 /// </remarks>
 module SchemaHint =
     /// <summary>
-    /// Documents a string property as an enum, deriving the accepted values from the cases of an
-    /// F# discriminated union, e.g. <c>SchemaHint.Enum(typeof&lt;MyUnion&gt;)</c>.
+    /// Documents a string property as an enum, deriving the accepted values
+    /// from the cases of an F# discriminated union, e.g.
+    /// <c>SchemaHint.Enum(typeof&lt;MyUnion&gt;)</c>.
     /// </summary>
     /// <remarks>
-    /// The emitted values are the union case names, so they must match the wire strings. If a case
-    /// name ever diverges from its wire value, either reflect a dedicated union whose names match or
-    /// fall back to <c>[&lt;RegularExpression&gt;]</c>.
+    /// The emitted values are the union case names, so they must match the wire
+    /// strings. If a case name ever diverges from its wire value, either
+    /// reflect a dedicated union whose names match or fall back to
+    /// <c>[&lt;RegularExpression&gt;]</c>.
     /// </remarks>
     [<AttributeUsage(AttributeTargets.Class
                      ||| AttributeTargets.Struct
@@ -48,10 +54,11 @@ module SchemaHint =
     /// <c>SchemaHint.Number (Minimum = "0", MultipleOf = 0.01)</c>.
     /// </summary>
     /// <remarks>
-    /// Use this only where <c>[&lt;Range(min, max)&gt;]</c> is not enough: it requires both bounds,
-    /// so it cannot express a minimum-only constraint on a positive magnitude. Bounds are JSON
-    /// Schema keywords carried as strings because <c>OpenApiSchema.Minimum</c> and
-    /// <c>OpenApiSchema.Maximum</c> are strings; leave a bound blank to omit it.
+    /// Use this only where <c>[&lt;Range(min, max)&gt;]</c> is not enough: it
+    /// requires both bounds, so it cannot express a minimum-only constraint on
+    /// a positive magnitude. Bounds are JSON Schema keywords carried as strings
+    /// because <c>OpenApiSchema.Minimum</c> and <c>OpenApiSchema.Maximum</c>
+    /// are strings; leave a bound blank to omit it.
     /// </remarks>
     [<AttributeUsage(AttributeTargets.Class
                      ||| AttributeTargets.Struct
@@ -81,23 +88,29 @@ module OpenApi =
     let private isOptionType (t : System.Type) : bool =
         if t.IsGenericType then
             let definition = t.GetGenericTypeDefinition ()
-            definition = typedefof<option<_>> || definition = typedefof<voption<_>>
+
+            definition = typedefof<option<_>>
+            || definition = typedefof<voption<_>>
         else
             false
 
     /// <summary>
-    /// Marks non-option record fields as required and fixes string property type inference in OpenAPI schemas.
+    /// Marks non-option record fields as required and fixes string property
+    /// type inference in OpenAPI schemas.
     /// </summary>
     type FSharpRecordSchemaTransformer () =
         interface IOpenApiSchemaTransformer with
-            member _.TransformAsync (schema, context, _cancellationToken : CancellationToken) =
+            member _.TransformAsync
+                (schema, context, _cancellationToken : CancellationToken)
+                =
                 let jsonType = context.JsonTypeInfo.Type
 
                 if FSharpType.IsRecord jsonType then
                     let required =
                         jsonType
                         |> FSharpType.GetRecordFields
-                        |> Seq.filter (fun field -> not (isOptionType field.PropertyType))
+                        |> Seq.filter (fun field ->
+                            not (isOptionType field.PropertyType))
                         |> Seq.map (fun field -> field.Name)
                         |> HashSet<string>
 
@@ -122,7 +135,8 @@ module OpenApi =
                 Task.CompletedTask
 
     /// <summary>
-    /// Populates schema and property descriptions from F# XML doc comments (`summary` tags on types and record fields).
+    /// Populates schema and property descriptions from F# XML doc comments
+    /// (`summary` tags on types and record fields).
     /// </summary>
     type XmlDocSchemaTransformer () =
         let loadedDocs = ConcurrentDictionary<string, Map<string, string>> ()
@@ -153,9 +167,12 @@ module OpenApi =
             loadedDocs.GetOrAdd (asm.Location, fun _ -> tryLoadDoc asm)
 
         interface IOpenApiSchemaTransformer with
-            member _.TransformAsync (schema, context, _cancellationToken : CancellationToken) =
+            member _.TransformAsync
+                (schema, context, _cancellationToken : CancellationToken)
+                =
                 let jsonType = context.JsonTypeInfo.Type
-                // .NET reflection uses '+' for nested types but XML doc uses '.'
+                // .NET reflection uses '+' for nested types but XML doc uses
+                // '.'
                 let xmlTypeName = jsonType.FullName.Replace ('+', '.')
 
                 let summaries = getSummaries jsonType.Assembly
@@ -171,37 +188,54 @@ module OpenApi =
                 if FSharpType.IsRecord jsonType then
                     for field in FSharpType.GetRecordFields jsonType do
                         let fieldKey = $"P:%s{xmlTypeName}.%s{field.Name}"
-                        let jsonName = JsonNamingPolicy.CamelCase.ConvertName field.Name
+
+                        let jsonName =
+                            JsonNamingPolicy.CamelCase.ConvertName field.Name
 
                         match summaries.TryFind fieldKey with
                         | Some summary ->
-                            if not (isNull schema.Properties) && schema.Properties.ContainsKey jsonName then
-                                schema.Properties[jsonName].Description <- summary
+                            if
+                                not (isNull schema.Properties)
+                                && schema.Properties.ContainsKey jsonName
+                            then
+                                schema.Properties[jsonName].Description <-
+                                    summary
                         | None -> ()
 
                 Task.CompletedTask
 
     /// <summary>
-    /// Applies <see cref="SchemaHint"/> attributes to generated schemas, so refined values are
-    /// documented as their wire representation: an enum derived from a union's cases, or a
-    /// constrained number.
+    /// Applies <see cref="SchemaHint"/> attributes to generated schemas, so
+    /// refined values are documented as their wire representation: an enum
+    /// derived from a union's cases, or a constrained number.
     /// </summary>
     type SchemaHintTransformer () =
         interface IOpenApiSchemaTransformer with
-            member _.TransformAsync (schema, context, _cancellationToken : CancellationToken) =
+            member _.TransformAsync
+                (schema, context, _cancellationToken : CancellationToken)
+                =
                 let apply (provider : ICustomAttributeProvider) =
-                    for attribute in provider.GetCustomAttributes (typeof<SchemaHint.EnumAttribute>, false) do
+                    for attribute in
+                        provider.GetCustomAttributes (
+                            typeof<SchemaHint.EnumAttribute>,
+                            false
+                        ) do
                         let hint = attribute :?> SchemaHint.EnumAttribute
 
                         schema.Type <- Nullable JsonSchemaType.String
 
                         schema.Enum <-
                             ResizeArray<JsonNode> [
-                                for case in FSharpType.GetUnionCases hint.UnionType ->
+                                for case in
+                                    FSharpType.GetUnionCases hint.UnionType ->
                                     JsonValue.Create case.Name :> JsonNode
                             ]
 
-                    for attribute in provider.GetCustomAttributes (typeof<SchemaHint.NumberAttribute>, false) do
+                    for attribute in
+                        provider.GetCustomAttributes (
+                            typeof<SchemaHint.NumberAttribute>,
+                            false
+                        ) do
                         let hint = attribute :?> SchemaHint.NumberAttribute
 
                         schema.Type <- Nullable JsonSchemaType.Number
@@ -215,7 +249,8 @@ module OpenApi =
                             schema.Maximum <- hint.Maximum
 
                         if hint.MultipleOf > 0.0 then
-                            schema.MultipleOf <- Nullable (decimal hint.MultipleOf)
+                            schema.MultipleOf <-
+                                Nullable (decimal hint.MultipleOf)
 
                 if not (isNull context.JsonPropertyInfo) then
                     apply context.JsonPropertyInfo.AttributeProvider
@@ -225,12 +260,15 @@ module OpenApi =
                 Task.CompletedTask
 
     /// <summary>
-    /// Documents <c>decimal</c> as a plain JSON number. System.Text.Json otherwise infers a
-    /// <c>number</c>-or-<c>string</c> union with a <c>double</c> format and a numeric-string pattern.
+    /// Documents <c>decimal</c> as a plain JSON number. System.Text.Json
+    /// otherwise infers a <c>number</c>-or-<c>string</c> union with a
+    /// <c>double</c> format and a numeric-string pattern.
     /// </summary>
     type DecimalSchemaTransformer () =
         interface IOpenApiSchemaTransformer with
-            member _.TransformAsync (schema, context, _cancellationToken : CancellationToken) =
+            member _.TransformAsync
+                (schema, context, _cancellationToken : CancellationToken)
+                =
                 if context.JsonTypeInfo.Type = typeof<decimal> then
                     schema.Type <- Nullable JsonSchemaType.Number
                     schema.Format <- null

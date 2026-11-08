@@ -66,7 +66,10 @@ module UpdateTodo =
             return result |> Option.map TodoCodec.fromRow
         }
 
-    let private handler (queryContext : QueryContextFactory) (id : Guid) : EndpointHandler =
+    let private handler
+        (queryContext : QueryContextFactory)
+        (id : Guid)
+        : EndpointHandler =
         Endpoint.handler (fun ctx ->
             taskResult {
                 let log = RequestLog.fromContext ctx
@@ -74,20 +77,33 @@ module UpdateTodo =
                 let! userId = Auth.getUserId ctx
 
                 let! title = TodoTitle.create req.Title
-                let! updated = update queryContext userId id title req.Completed
+
+                let! updated =
+                    update queryContext userId id title req.Completed
 
                 match updated with
                 | Some updated ->
-                    log.Info ($"Updated todo %O{id}", LogProp.prop "todoId" (id.ToString ()))
+                    log.Info (
+                        $"Updated todo %O{id}",
+                        LogProp.prop "todoId" (id.ToString ())
+                    )
+
                     do! Json.write ctx (TodoResponse.fromDomain updated)
                 | None ->
-                    log.Warn ($"Todo %O{id} not found", LogProp.prop "todoId" (id.ToString ()))
+                    log.Warn (
+                        $"Todo %O{id} not found",
+                        LogProp.prop "todoId" (id.ToString ())
+                    )
+
                     return! Error (NotFound $"Todo %O{id} not found")
             })
 
     let private configureOperation (op : OpenApiOperation) _ _ =
         op.Summary <- "Update a todo"
-        op.Description <- "Replaces the title and completed flag of an existing todo."
+
+        op.Description <-
+            "Replaces the title and completed flag of an existing todo."
+
         op.Tags <- HashSet [ OpenApiTagReference "Todos" ]
         Task.CompletedTask
 

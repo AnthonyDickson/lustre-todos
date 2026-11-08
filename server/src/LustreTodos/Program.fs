@@ -40,30 +40,44 @@ open LustreTodos.Shared.Json
 open LustreTodos.Shared.OpenApi
 
 
-let private addOpenApiToBuilder (builder : WebApplicationBuilder) (ouath2 : OAuth2Config) =
+let private addOpenApiToBuilder
+    (builder : WebApplicationBuilder)
+    (ouath2 : OAuth2Config)
+    =
     let oauth2AuthUrl = ouath2.AuthorizationUrl
     let oauth2TokenUrl = ouath2.TokenUrl
 
     builder.Services.AddOpenApi (fun options ->
-        options.AddSchemaTransformer<FSharpOptionSchemaTransformer> () |> ignore
-        options.AddSchemaTransformer<OpenApi.FSharpRecordSchemaTransformer> () |> ignore
-        options.AddSchemaTransformer<OpenApi.XmlDocSchemaTransformer> () |> ignore
-        options.AddSchemaTransformer<OpenApi.SchemaHintTransformer> () |> ignore
-        options.AddSchemaTransformer<OpenApi.DecimalSchemaTransformer> () |> ignore
+        options.AddSchemaTransformer<FSharpOptionSchemaTransformer> ()
+        |> ignore
+
+        options.AddSchemaTransformer<OpenApi.FSharpRecordSchemaTransformer> ()
+        |> ignore
+
+        options.AddSchemaTransformer<OpenApi.XmlDocSchemaTransformer> ()
+        |> ignore
+
+        options.AddSchemaTransformer<OpenApi.SchemaHintTransformer> ()
+        |> ignore
+
+        options.AddSchemaTransformer<OpenApi.DecimalSchemaTransformer> ()
+        |> ignore
 
         options.AddDocumentTransformer (fun doc _ _ ->
             if isNull doc.Components then
                 doc.Components <- OpenApiComponents ()
 
             if isNull doc.Components.SecuritySchemes then
-                doc.Components.SecuritySchemes <- Dictionary<string, IOpenApiSecurityScheme> ()
+                doc.Components.SecuritySchemes <-
+                    Dictionary<string, IOpenApiSecurityScheme> ()
 
             doc.Components.SecuritySchemes["bearerAuth"] <-
                 OpenApiSecurityScheme (
                     Type = SecuritySchemeType.Http,
                     Scheme = "bearer",
                     BearerFormat = "JWT",
-                    Description = "JWT access token from Authelia. Use the Scalar OAuth2 flow to obtain one."
+                    Description =
+                        "JWT access token from Authelia. Use the Scalar OAuth2 flow to obtain one."
                 )
 
             doc.Components.SecuritySchemes["scalarOAuth2"] <-
@@ -73,7 +87,8 @@ let private addOpenApiToBuilder (builder : WebApplicationBuilder) (ouath2 : OAut
                         OpenApiOAuthFlows (
                             AuthorizationCode =
                                 OpenApiOAuthFlow (
-                                    AuthorizationUrl = System.Uri oauth2AuthUrl,
+                                    AuthorizationUrl =
+                                        System.Uri oauth2AuthUrl,
                                     TokenUrl = System.Uri oauth2TokenUrl
                                 )
                         )
@@ -112,7 +127,8 @@ let private applyMigrations (connectionString : string) =
         DeployChanges.To
             .SqliteDatabase(connectionString)
             .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly ())
-            // A script that fails partway leaves the schema as it was. See docs/database.md.
+            // A script that fails partway leaves the schema as it was. See
+            // docs/database.md.
             .WithTransactionPerScript()
             .LogToConsole()
             .Build()
@@ -124,13 +140,17 @@ let private applyMigrations (connectionString : string) =
     use conn = new SqliteConnection (connectionString)
     conn.Open ()
 
-    // WAL is stored in the database file, so setting it once applies to every later connection.
-    // Foreign keys are per connection and are set in the connection string (Config.withForeignKeys).
+    // WAL is stored in the database file, so setting it once applies to every
+    // later connection. Foreign keys are per connection and are set in the
+    // connection string (Config.withForeignKeys).
     use walCmd = conn.CreateCommand ()
     walCmd.CommandText <- "PRAGMA journal_mode = WAL"
     walCmd.ExecuteNonQuery () |> ignore
 
-let private handleException (loggerFactory : ILoggerFactory) (next : RequestDelegate) : RequestDelegate =
+let private handleException
+    (loggerFactory : ILoggerFactory)
+    (next : RequestDelegate)
+    : RequestDelegate =
     let logger = loggerFactory.CreateLogger "LustreTodos.Program"
 
     RequestDelegate (fun (ctx : HttpContext) ->
@@ -162,15 +182,19 @@ let private configureSerilog
         |> Option.ofObj
         |> Option.filter (not << System.String.IsNullOrWhiteSpace)
 
-    // The app's request log records every request, so the framework's own per-request logs (routing,
-    // static files, hosting diagnostics) only duplicate it. Warnings and errors still come through.
-    config.MinimumLevel.Information().MinimumLevel.Override ("Microsoft.AspNetCore", LogEventLevel.Warning)
+    // The app's request log records every request, so the framework's own
+    // per-request logs (routing, static files, hosting diagnostics) only
+    // duplicate it. Warnings and errors still come through.
+    config.MinimumLevel
+        .Information()
+        .MinimumLevel.Override ("Microsoft.AspNetCore", LogEventLevel.Warning)
     |> ignore
 
-    // Filter out healthcheck noise for the status endpoint. Framework per-request logs
-    // (Microsoft.AspNetCore.Hosting.Diagnostics) carry no status code, so they are dropped
-    // whenever the path matches. The app's own buffered request-log summary does carry the
-    // status code, so only successful probes are dropped; failures (503) stay visible.
+    // Filter out healthcheck noise for the status endpoint. Framework
+    // per-request logs (Microsoft.AspNetCore.Hosting.Diagnostics) carry no
+    // status code, so they are dropped whenever the path matches. The app's own
+    // buffered request-log summary does carry the status code, so only
+    // successful probes are dropped; failures (503) stay visible.
     config.Filter.ByExcluding (fun (e : LogEvent) ->
         let prop name =
             match e.Properties.TryGetValue name with
@@ -201,8 +225,9 @@ let private configureSerilog
 
     match filePath with
     | Some path ->
-        // Roll at 10 MB and keep 10 files, bounding the log at about 100 MB. Without rolling, the sink
-        // stops writing once the file reaches its 1 GB default limit.
+        // Roll at 10 MB and keep 10 files, bounding the log at about 100 MB.
+        // Without rolling, the sink stops writing once the file reaches its 1
+        // GB default limit.
         config.WriteTo.File (
             RenderedCompactJsonFormatter (),
             path,
@@ -225,12 +250,15 @@ let private apiNotFound : RequestDelegate =
         }
         :> Task)
 
-let private configureForwardedHeaders (options : ForwardedHeadersOptions) : unit =
-    options.ForwardedHeaders <- ForwardedHeaders.XForwardedFor ||| ForwardedHeaders.XForwardedProto
+let private configureForwardedHeaders
+    (options : ForwardedHeadersOptions)
+    : unit =
+    options.ForwardedHeaders <-
+        ForwardedHeaders.XForwardedFor ||| ForwardedHeaders.XForwardedProto
 
-    // Trust common Docker/private network ranges, in addition to the default loopback addresses
-    // (127.0.0.0/8 and ::1), which a proxy on the same host uses when the server runs natively or
-    // with host networking.
+    // Trust common Docker/private network ranges, in addition to the default
+    // loopback addresses (127.0.0.0/8 and ::1), which a proxy on the same host
+    // uses when the server runs natively or with host networking.
     options.KnownIPNetworks.Add (System.Net.IPNetwork.Parse "10.0.0.0/8")
     options.KnownIPNetworks.Add (System.Net.IPNetwork.Parse "172.16.0.0/12")
     options.KnownIPNetworks.Add (System.Net.IPNetwork.Parse "192.168.0.0/16")
@@ -247,25 +275,30 @@ let private buildEndpoints
     let queryContext = QueryContextFactory.Create connectionString
 
     let startedAt =
-        System.DateTimeOffset (Process.GetCurrentProcess().StartTime.ToUniversalTime ())
+        System.DateTimeOffset (
+            Process.GetCurrentProcess().StartTime.ToUniversalTime ()
+        )
 
     let authEndpoints = [
         GET [ Login.endpoint loginReturnUrl ]
-        // POST, so another site cannot log the user out with a link: the SameSite=Lax cookie is not
-        // sent with its cross-site form posts.
+        // POST, so another site cannot log the user out with a link: the
+        // SameSite=Lax cookie is not sent with its cross-site form posts.
         POST [ Logout.endpoint providerLogoutUrl ]
     ]
 
     let statusEndpoints = [
         GET [
-            GetStatus.endpoint connectionString app.Environment.EnvironmentName startedAt
+            GetStatus.endpoint
+                connectionString
+                app.Environment.EnvironmentName
+                startedAt
         ]
     ]
 
     let featureEndpoints = TodoEndpoints.all queryContext |> withAuth
 
-    // Test-only helpers, available in Development only (like the Scalar docs below) so they can
-    // never be reached against real data.
+    // Test-only helpers, available in Development only (like the Scalar docs
+    // below) so they can never be reached against real data.
     let testEndpoints =
         if app.Environment.IsDevelopment () then
             [ DELETE [ ResetUserData.endpoint queryContext ] ] |> withAuth
@@ -279,15 +312,18 @@ let private buildEndpoints
         testEndpoints
     ]
 
-let private configureBuilder (builder : WebApplicationBuilder) (config : AppConfig) : unit =
+let private configureBuilder
+    (builder : WebApplicationBuilder)
+    (config : AppConfig)
+    : unit =
     let isDevelopment = builder.Environment.IsDevelopment ()
 
     Auth.configureServices builder.Services isDevelopment config.Oidc
 
     match config.DataProtection with
     | Some dataProtection ->
-        // A fixed application name keeps the keys valid if the binary moves; the default derives it
-        // from the content root path.
+        // A fixed application name keeps the keys valid if the binary moves;
+        // the default derives it from the content root path.
         builder.Services
             .AddDataProtection()
             .SetApplicationName("LustreTodos")
@@ -297,14 +333,16 @@ let private configureBuilder (builder : WebApplicationBuilder) (config : AppConf
 
     builder.Services.AddRouting().AddOxpecker () |> ignore
 
-    builder.Services.Configure<ForwardedHeadersOptions> configureForwardedHeaders
+    builder.Services.Configure<ForwardedHeadersOptions>
+        configureForwardedHeaders
     |> ignore
 
     builder.Services.Configure<HostOptions> (fun (options : HostOptions) ->
         options.ShutdownTimeout <- System.TimeSpan.FromSeconds 30L)
     |> ignore
 
-    builder.WebHost.ConfigureKestrel (fun options -> options.Limits.MaxRequestBodySize <- 65536L)
+    builder.WebHost.ConfigureKestrel (fun options ->
+        options.Limits.MaxRequestBodySize <- 65536L)
     |> ignore
 
     builder.Host.UseSerilog (configureSerilog config.Logging) |> ignore
@@ -320,7 +358,9 @@ let private configureApp (app : WebApplication) (config : AppConfig) : unit =
     | Some config when isDevelopment -> addOpenApiToApp app config.ClientId
     | _ -> ()
 
-    app.Use (handleException (app.Services.GetRequiredService<ILoggerFactory> ()))
+    app.Use (
+        handleException (app.Services.GetRequiredService<ILoggerFactory> ())
+    )
     |> ignore
 
     app.UseForwardedHeaders () |> ignore
@@ -330,7 +370,8 @@ let private configureApp (app : WebApplication) (config : AppConfig) : unit =
 
     app.Use (
         Shared.RequestLogging.Middleware.requestLogging (
-            (app.Services.GetRequiredService<Serilog.ILogger> ()).ForContext ("SourceContext", "LustreTodos.Request")
+            (app.Services.GetRequiredService<Serilog.ILogger> ())
+                .ForContext ("SourceContext", "LustreTodos.Request")
         )
     )
     |> ignore
@@ -338,21 +379,28 @@ let private configureApp (app : WebApplication) (config : AppConfig) : unit =
     app.UseAuthorization () |> ignore
 
     app.UseOxpecker (
-        buildEndpoints config.ConnectionString config.Login.ReturnUrl (Option.ofObj config.Oidc.LogoutUrl) app
+        buildEndpoints
+            config.ConnectionString
+            config.Login.ReturnUrl
+            (Option.ofObj config.Oidc.LogoutUrl)
+            app
     )
     |> ignore
 
-    // Unknown API paths get a JSON 404 rather than the SPA's index.html. The literal /api segment
-    // outranks the SPA fallback's catch-all. Like that fallback it answers GET and HEAD only, so
-    // other methods keep their 405.
+    // Unknown API paths get a JSON 404 rather than the SPA's index.html. The
+    // literal /api segment outranks the SPA fallback's catch-all. Like that
+    // fallback it answers GET and HEAD only, so other methods keep their 405.
     app
         .MapFallback("/api/{**path}", apiNotFound)
-        .WithMetadata (HttpMethodMetadata [| HttpMethods.Get; HttpMethods.Head |])
+        .WithMetadata (
+            HttpMethodMetadata [| HttpMethods.Get; HttpMethods.Head |]
+        )
     |> ignore
 
-    // Run the vite dev server for accessing the SPA bundle in the dev environment.
-    // The fallback is explicitly disabled to avoid surprising and difficult to
-    // debug situations where the backend is not loading the code you expect.
+    // Run the vite dev server for accessing the SPA bundle in the dev
+    // environment. The fallback is explicitly disabled to avoid surprising and
+    // difficult to debug situations where the backend is not loading the code
+    // you expect.
     if not isDevelopment then
         app.MapFallbackToFile "index.html" |> ignore
 
@@ -364,7 +412,8 @@ let main (args : string array) : int =
         try
             Config.load builder.Services builder.Configuration
         with :? OptionsValidationException as ex ->
-            eprintfn "The server refused to start: configuration validation failed."
+            eprintfn
+                "The server refused to start: configuration validation failed."
 
             ex.Failures |> Seq.iter (fun failure -> eprintfn "  - %s" failure)
 
