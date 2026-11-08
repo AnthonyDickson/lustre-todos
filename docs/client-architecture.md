@@ -122,6 +122,9 @@ No router library — custom navigation effects via browser APIs.
 (ignoring its query and fragment) and `to_string` builds the links, so paths are
 written once. An unrecognised path is `NotFound`.
 
+`shared/api_route.gleam` does the same for the server's API: requests build
+their URLs from it rather than from strings, so each API path is written once.
+
 `app.gleam` holds the current page as a `Page` union, one case per page. On a
 URL change it sets the title and either updates the page it is already on
 (keeping its state, e.g. the todo filter changing) or starts the new page with

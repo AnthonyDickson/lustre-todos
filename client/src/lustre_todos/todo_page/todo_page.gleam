@@ -11,6 +11,7 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 import lustre_todos/shared/api_error
+import lustre_todos/shared/api_route
 import lustre_todos/shared/auth_route
 import lustre_todos/shared/effect
 import lustre_todos/shared/guard
@@ -210,7 +211,7 @@ fn save_todos(todos: List(todo_item.Todo)) -> effect.Effect(msg) {
 }
 
 fn fetch_todos() -> effect.Effect(Msg) {
-  effect.get("/api/todos", fn(result) {
+  effect.get(api_route.to_string(api_route.GetAllTodos), fn(result) {
     case result {
       Ok(body) ->
         ClientFetchedTodos(response.decode_success(
@@ -312,7 +313,7 @@ pub fn update(
         |> json.to_string
 
       let create_effect =
-        effect.post("/api/todos", body, fn(result) {
+        effect.post(api_route.to_string(api_route.CreateTodo), body, fn(result) {
           case result {
             Ok(_) -> NoOp
             Error(err) ->
@@ -357,7 +358,7 @@ pub fn update(
         request
         |> todo_item.update_todo_request_to_json
         |> json.to_string
-      let url = "/api/todos/" <> uuid.to_string(id)
+      let url = api_route.to_string(api_route.UpdateTodo(id))
       let patch_effect =
         effect.patch(url, body, fn(result) {
           case result {
@@ -427,7 +428,7 @@ pub fn update(
         request
         |> todo_item.update_todo_request_to_json
         |> json.to_string
-      let url = "/api/todos/" <> uuid.to_string(id)
+      let url = api_route.to_string(api_route.UpdateTodo(id))
       let patch_effect =
         effect.patch(url, body, fn(result) {
           case result {
@@ -450,7 +451,7 @@ pub fn update(
       )
 
       let todos = list.filter(loaded_todos(model), fn(t) { t.id != id })
-      let url = "/api/todos/" <> uuid.to_string(id)
+      let url = api_route.to_string(api_route.DeleteTodo(id))
       let delete_effect =
         effect.delete(url, fn(result) {
           case result {
@@ -471,16 +472,19 @@ pub fn update(
       let #(completed, active) =
         list.partition(loaded_todos(model), fn(t) { t.completed })
       let delete_effect =
-        effect.delete("/api/todos/completed", fn(result) {
-          case result {
-            Ok(_) -> NoOp
-            Error(err) ->
-              TodoActionFailed(
-                DeleteCompleted(completed),
-                response.http_error_to_api_error(err),
-              )
-          }
-        })
+        effect.delete(
+          api_route.to_string(api_route.DeleteCompletedTodos),
+          fn(result) {
+            case result {
+              Ok(_) -> NoOp
+              Error(err) ->
+                TodoActionFailed(
+                  DeleteCompleted(completed),
+                  response.http_error_to_api_error(err),
+                )
+            }
+          },
+        )
         |> effect.with_timeout(request_timeout_ms)
       #(with_todos(model, active), delete_effect, [])
     }
