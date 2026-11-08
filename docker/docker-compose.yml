@@ -1,11 +1,14 @@
+name: lustre-todos
+
 services:
   authelia:
     image: authelia/authelia:4.39.20
-    container_name: lustre-todos-authelia-e2e
-    network_mode: "host"
+    container_name: lustre-todos-authelia
     restart: unless-stopped
+    ports:
+      - '9091:9091'
     volumes:
-      - ./authelia:/config
+      - ../authelia:/config
     environment:
       - TZ=UTC
     healthcheck:
@@ -13,25 +16,23 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
-      start_period: 10s
+      start_period: 5s
 
   server:
     image: mcr.microsoft.com/dotnet/sdk:10.0
-    container_name: lustre-todos-server-e2e
+    container_name: lustre-todos-server
     network_mode: "host"
     working_dir: /src/server/src/LustreTodos
     stdin_open: true
     tty: true
     command: >
-      sh -c "rm -f /tmp/todos_e2e.db && dotnet watch run --no-hot-reload"
+      dotnet watch run --no-hot-reload
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://0.0.0.0:5000
-      - Login__ReturnUrl=http://localhost:5173/
-      - ConnectionStrings__Default=Data Source=/tmp/todos_e2e.db
     volumes:
-      - ./.git:/src/.git:ro
-      - ./server:/src/server
+      - ../.git:/src/.git:ro
+      - ../server:/src/server
     healthcheck:
       test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:5000/api/status"]
       interval: 5s
@@ -41,9 +42,9 @@ services:
 
   client:
     build:
-      context: .
-      dockerfile: Dockerfile.client-dev
-    container_name: lustre-todos-client-e2e
+      context: ..
+      dockerfile: docker/Dockerfile.client-dev
+    container_name: lustre-todos-client
     network_mode: "host"
     working_dir: /src/client
     stdin_open: true
@@ -52,39 +53,16 @@ services:
       sh -c "npm install && npx vite --host"
     environment:
       - NODE_ENV=development
-      - BACKEND_URL=http://localhost:5000
     volumes:
-      - ./client:/src/client
+      - ../client:/src/client
       - client-node-modules:/src/client/node_modules
       - gleam-packages:/src/client/build
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "-O", "/dev/null", "http://localhost:5173"]
-      interval: 3s
-      timeout: 3s
-      retries: 20
-      start_period: 10s
-
-  e2e:
-    image: mcr.microsoft.com/playwright:v1.61.1-resolute
-    container_name: lustre-todos-playwright-e2e
-    network_mode: "host"
-    working_dir: /tests
-    command: sh -c "npm install && npx playwright test --reporter=line"
-    environment:
-      - BASE_URL=http://localhost:5173
-      - CI=1
-    volumes:
-      - ./tests/e2e:/tests
-      - e2e-node-modules:/tests/node_modules
     depends_on:
-      authelia:
-        condition: service_healthy
       server:
         condition: service_healthy
-      client:
+      authelia:
         condition: service_healthy
 
 volumes:
   gleam-packages:
   client-node-modules:
-  e2e-node-modules:

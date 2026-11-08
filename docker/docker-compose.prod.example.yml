@@ -5,6 +5,8 @@
 # Login__ReturnUrl. See docs/prod-oidc-setup.md.
 # ═══════════════════════════════════════════════════════════════════════
 
+name: lustre-todos
+
 services:
   lustre-todos:
     image: ghcr.io/anthonydickson/lustre-todos:latest

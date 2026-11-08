@@ -17,14 +17,14 @@ Output: `server/src/LustreTodos/bin/Release/publish/`
 
 ```bash
 # Build
-docker build -t ghcr.io/your-org/lustre-todos:latest .
+docker build -f docker/Dockerfile -t ghcr.io/your-org/lustre-todos:latest .
 # Login, e.g. with a GitHub Personal Access Token with the `write:packages` permissions
 cat $MY_PAT | docker login ghcr.io -u $(gh api user --jq .login) --password-stdin
 # Push
 docker push ghcr.io/your-org/lustre-todos:latest
 ```
 
-The multi-stage `Dockerfile` installs Node.js and Gleam, builds the client, then
+The multi-stage `docker/Dockerfile` installs Node.js and Gleam, builds the client, then
 publishes the server for musl (`linux-musl-x64`) into Microsoft's `runtime-deps`
 Alpine image, which holds only the native libraries a self-contained .NET app
 needs, plus BusyBox for the healthcheck's `wget`. It runs as the image's non-root
@@ -49,9 +49,9 @@ not tagged `latest`.
 ### Deploying
 
 ```bash
-cp docker-compose.prod.example.yml docker-compose.prod.yml
-# edit docker-compose.prod.yml with your OIDC settings, then:
-docker compose -f docker-compose.prod.yml up -d
+cp docker/docker-compose.prod.example.yml docker/docker-compose.prod.yml
+# edit docker/docker-compose.prod.yml with your OIDC settings, then:
+docker compose -f docker/docker-compose.prod.yml up -d
 ```
 
 The example compose file ships with dev OIDC defaults. Override for production:
@@ -62,10 +62,10 @@ Oidc__ClientId=lustre-todos \
 Oidc__ClientSecret="$(pass show oidc/lustre-todos/client-secret)" \
 Oidc__CallbackPath=/signin-oidc \
 Login__ReturnUrl=https://app.example.com/ \
-  docker compose -f docker-compose.prod.yml up -d
+  docker compose -f docker/docker-compose.prod.yml up -d
 ```
 
-> **Note**: `docker-compose.prod.yml` is gitignored. Copy from `docker-compose.prod.example.yml` and customize it.
+> **Note**: `docker/docker-compose.prod.yml` is gitignored. Copy from `docker/docker-compose.prod.example.yml` and customize it.
 
 See [Production OIDC Setup](prod-oidc-setup.md) for the full OIDC configuration guide.
 
@@ -75,7 +75,7 @@ The server uses SQLite. Override the connection string to use a persistent path:
 
 ```bash
 ConnectionStrings__Default="Data Source=/data/app.db" \
-  docker compose -f docker-compose.prod.yml up -d
+  docker compose -f docker/docker-compose.prod.yml up -d
 ```
 
 Use an absolute path — relative paths resolve to the container's working directory,

@@ -53,6 +53,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: docker/Dockerfile
           load: true
           tags: lustre-todos:smoke
           build-args: |
@@ -95,12 +96,13 @@ jobs:
 
       - if: failure() && steps.smoke.outcome == 'failure'
         run: |
-          echo "The image failed its smoke test. Build it with 'docker build .' and run it with a named volume over /data to reproduce."
+          echo "The image failed its smoke test. Build it with 'docker build -f docker/Dockerfile .' and run it with a named volume over /data to reproduce."
 
       - name: Push
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: docker/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

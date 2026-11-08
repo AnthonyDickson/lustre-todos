@@ -1,7 +1,7 @@
 # Production OIDC Setup
 
 > [!IMPORTANT]
-> The files under `authelia/`, `docker-compose.yml`, and `appsettings.Development.json`
+> The files under `authelia/`, `docker/docker-compose.yml`, and `appsettings.Development.json`
 > are **not used in production**. Configure the server via environment variables.
 
 ## Overview

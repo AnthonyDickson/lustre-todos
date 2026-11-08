@@ -50,8 +50,8 @@ publish: copy-client-dist
 
 # Playwright E2E tests in Docker
 e2e-test:
-	docker compose -f docker-compose.e2e.yml up --abort-on-container-exit --exit-code-from e2e --remove-orphans
-	docker compose -f docker-compose.e2e.yml down
+	docker compose -f docker/docker-compose.e2e.yml up --abort-on-container-exit --exit-code-from e2e --remove-orphans
+	docker compose -f docker/docker-compose.e2e.yml down
 
 # Format with fantomas + gleam format
 format:

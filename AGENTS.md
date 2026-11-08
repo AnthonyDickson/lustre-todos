@@ -62,7 +62,7 @@ changes, update the doc in the same change.
 | `just lint`                | Lint F# with fsharplint + [custom lints](./scripts)   |
 
 Dev environment via Nix: `nix develop` (or `direnv allow`). The justfile is the
-source of truth for the full target list. Quick start: `docker compose up` (log
+source of truth for the full target list. Quick start: `docker compose -f docker/docker-compose.yml up` (log
 in with `dev`/`dev-password`), or natively `just server-watch` plus
 `just client-watch`. See [README.md](README.md).
 

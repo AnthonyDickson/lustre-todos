@@ -26,8 +26,9 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.client-dev
-          tags: e2e-client:latest
+          file: docker/Dockerfile.client-dev
+          # The name compose gives the e2e stack's client image, so it uses this build.
+          tags: lustre-todos-e2e-client:latest
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -35,14 +36,12 @@ jobs:
       - name: Run E2E tests
         run: |
           docker compose \
-            -f docker-compose.e2e.yml \
-            -f docker-compose.e2e.ci.yml \
+            -f docker/docker-compose.e2e.yml \
+            -f docker/docker-compose.e2e.ci.yml \
             up \
             --abort-on-container-exit \
             --exit-code-from e2e \
             --remove-orphans
-        env:
-          COMPOSE_PROJECT_NAME: e2e
 
       - name: Upload test artifacts
         if: always()

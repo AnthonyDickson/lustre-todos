@@ -1,3 +1,5 @@
+name: lustre-todos-e2e
+
 services:
   server:
     volumes:

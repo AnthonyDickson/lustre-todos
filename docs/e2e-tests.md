@@ -48,9 +48,9 @@ rather than hidden. To check for order or parallelism dependencies, run the
 suite repeatedly without retries:
 
 ```bash
-docker compose -f docker-compose.e2e.yml run --rm e2e \
+docker compose -f docker/docker-compose.e2e.yml run --rm e2e \
   sh -c "npm install && npx playwright test --retries=0 --repeat-each=4"
-docker compose -f docker-compose.e2e.yml down
+docker compose -f docker/docker-compose.e2e.yml down
 ```
 
 ## Conventions
