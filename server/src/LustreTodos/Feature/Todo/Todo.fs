@@ -46,5 +46,5 @@ type Todo = {
     Id : Guid
     Title : TodoTitle
     Completed : bool
-    CreatedAt : DateTime
+    CreatedAt : DateTimeOffset
 }

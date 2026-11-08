@@ -26,6 +26,7 @@
 
     <Compile Include="Data/Db.fs" />
     <Compile Include="Data/Constraints.fs" />
+    <Compile Include="Data/Instant.fs" />
 
     <Compile Include="Feature/Auth/Login.fs" />
     <Compile Include="Feature/Auth/Logout.fs" />

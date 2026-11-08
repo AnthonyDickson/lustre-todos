@@ -84,8 +84,6 @@ domain module remain the source of truth, so keep the hints in step when a rule 
 
 - `FSharpOptionSchemaTransformer` (from `Oxpecker.OpenApi`) - renders `option`/`voption` as nullable.
 - `FSharpRecordSchemaTransformer` - marks non-`option` record fields required and fixes string type inference.
-- `DateTimeAsUnixTimestampTransformer` - documents `DateTime`/`DateTimeOffset` as an integer Unix
-  timestamp in seconds, matching the project's JSON encoding.
 - `XmlDocSchemaTransformer` - populates descriptions from F# XML doc comments.
 - `SchemaHintTransformer` - applies the `SchemaHint` attributes.
 - `DecimalSchemaTransformer` - documents `decimal` as a plain `number`. Without it, `System.Text.Json`

@@ -25,7 +25,7 @@ module main =
           UserId: string
           Title: string
           Completed: bool
-          CreatedAt: int64 }
+          CreatedAt: System.DateTime }
 
     let Todos = table<Todos>
 

@@ -10,7 +10,8 @@ CREATE TABLE [Todos] (
     UserId    TEXT NOT NULL,
     Title     TEXT NOT NULL,
     Completed BOOLEAN NOT NULL DEFAULT 0,
-    CreatedAt INTEGER NOT NULL
+    -- UTC, see docs/dates.md
+    CreatedAt DATETIME NOT NULL
 );
 
 CREATE INDEX IX_Todos_UserId on [Todos](UserId);

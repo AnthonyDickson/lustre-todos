@@ -122,32 +122,6 @@ module OpenApi =
                 Task.CompletedTask
 
     /// <summary>
-    /// Changes DateTime/DateTimeOffset properties from OpenAPI's default "string" (date-time format)
-    /// to "number" (Unix timestamp in seconds) to match the project's actual JSON encoding.
-    /// </summary>
-    type DateTimeAsUnixTimestampTransformer () =
-        interface IOpenApiSchemaTransformer with
-            member _.TransformAsync (schema, context, _cancellationToken : CancellationToken) =
-                match context.JsonPropertyInfo with
-                | null -> Task.CompletedTask
-                | propInfo when
-                    propInfo.PropertyType = typeof<System.DateTime>
-                    || propInfo.PropertyType = typeof<System.DateTimeOffset>
-                    ->
-                    schema.Type <- JsonSchemaType.Integer
-                    schema.Format <- "int64"
-                    schema.Example <- JsonValue.Create 1785536631L
-
-                    schema.Description <-
-                        match schema.Description with
-                        | null
-                        | "" -> "Unix timestamp in seconds"
-                        | existing -> $"{existing} (Unix timestamp in seconds)"
-
-                    Task.CompletedTask
-                | _ -> Task.CompletedTask
-
-    /// <summary>
     /// Populates schema and property descriptions from F# XML doc comments (`summary` tags on types and record fields).
     /// </summary>
     type XmlDocSchemaTransformer () =

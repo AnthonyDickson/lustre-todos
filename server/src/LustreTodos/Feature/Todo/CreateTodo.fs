@@ -35,7 +35,7 @@ module CreateTodo =
         Completed : bool
 
         /// <summary>When the todo was created.</summary>
-        CreatedAt : DateTime
+        CreatedAt : DateTimeOffset
     }
 
     [<Literal>]

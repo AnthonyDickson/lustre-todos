@@ -3,6 +3,8 @@ namespace LustreTodos.Tests.Todo
 module EndpointTests =
     open System
     open System.Net
+    open System.Net.Http
+    open System.Text
     open Expecto
 
     open LustreTodos.Feature.Todo
@@ -13,7 +15,7 @@ module EndpointTests =
         Id = id
         Title = title
         Completed = completed
-        CreatedAt = DateTime.UtcNow
+        CreatedAt = DateTimeOffset.UtcNow
     }
 
     let private create app (request : CreateTodo.CreateTodoRequest) =
@@ -21,6 +23,13 @@ module EndpointTests =
             let! response = TestHttp.postJson app CreateTodo.Path request |> Async.AwaitTask
             Expect.equal response.StatusCode HttpStatusCode.Created "creating a todo should return 201"
         }
+
+    let private postRaw (app : TestApp) (json : string) =
+        let content = new StringContent (json, Encoding.UTF8, "application/json")
+        app.Client.PostAsync (CreateTodo.Path, content) |> Async.AwaitTask
+
+    let private rawTodo (createdAt : string) =
+        $"""{{"id": "{Guid.NewGuid ()}", "title": "Timed", "completed": false, "createdAt": "{createdAt}"}}"""
 
     let private newApp () =
         TestApp.create (TestAppConfig.empty |> TestAppConfig.withTodos)
@@ -118,6 +127,35 @@ module EndpointTests =
                     |> Async.AwaitTask
 
                 Expect.equal blank.StatusCode HttpStatusCode.BadRequest "a blank title should be rejected"
+            }
+
+            testCaseAsync "POST /api/todos stores the creation time as an instant and returns it in UTC"
+            <| async {
+                use app = newApp ()
+
+                let! response = postRaw app (rawTodo "2026-10-03T16:23:50.125+12:00")
+                Expect.equal response.StatusCode HttpStatusCode.Created "status code should be 201"
+                let! created = response.Content.ReadAsStringAsync () |> Async.AwaitTask
+
+                Expect.stringContains created "\"createdAt\":\"2026-10-03T04:23:50.125Z\"" "the response should be UTC"
+
+                let! all = app.Client.GetStringAsync ReadAllTodos.Path |> Async.AwaitTask
+
+                Expect.stringContains
+                    all
+                    "\"createdAt\":\"2026-10-03T04:23:50.125Z\""
+                    "the stored instant should be unchanged"
+            }
+
+            testCaseAsync "POST /api/todos accepts nanosecond fractions and rejects a time without an offset"
+            <| async {
+                use app = newApp ()
+
+                let! nanoseconds = postRaw app (rawTodo "2026-10-03T04:23:50.123456789Z")
+                Expect.equal nanoseconds.StatusCode HttpStatusCode.Created "nanosecond fractions should be accepted"
+
+                let! noOffset = postRaw app (rawTodo "2026-10-03T04:23:50")
+                Expect.equal noOffset.StatusCode HttpStatusCode.BadRequest "a time without an offset should be rejected"
             }
 
             testCaseAsync "POST /api/todos with an existing ID is rejected and keeps the original"

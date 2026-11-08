@@ -68,6 +68,8 @@ Deletes `app.sqlite3`, re-applies all migrations in order, regenerates `Db.fs`.
   rename) never leaves a half-migrated database. SQLite's schema changes are
   transactional, so no script needs to opt out, and scripts do not begin
   transactions of their own.
+- **Instants are UTC `DATETIME` columns.** Codecs convert through
+  `Data/Instant.fs`, and JSON carries RFC 3339 strings. See [dates](dates.md).
 - **Constraints are checked before writes.** `Constraints.requireAll` and
   `requireOne` run explicit checks that mirror the schema's integrity
   constraints, so a violation returns a `400` naming the problem rather than

@@ -1,5 +1,6 @@
 import gleam/dynamic/decode
 import gleam/json
+import gleam/time/calendar
 import gleam/time/timestamp.{type Timestamp}
 import youid/uuid.{type Uuid}
 
@@ -21,9 +22,15 @@ fn uuid_decoder() -> decode.Decoder(Uuid) {
   })
 }
 
+/// Instants are RFC 3339 strings, e.g. "2026-10-03T04:23:50.5Z". See docs/dates.md.
 fn timestamp_decoder() -> decode.Decoder(Timestamp) {
-  decode.int
-  |> decode.then(fn(s) { decode.success(timestamp.from_unix_seconds(s)) })
+  decode.string
+  |> decode.then(fn(s) {
+    case timestamp.parse_rfc3339(s) {
+      Ok(t) -> decode.success(t)
+      Error(Nil) -> decode.failure(timestamp.unix_epoch, "Timestamp")
+    }
+  })
 }
 
 pub fn todo_decoder() -> decode.Decoder(Todo) {
@@ -39,12 +46,14 @@ pub fn todos_decoder() -> decode.Decoder(List(Todo)) {
 }
 
 pub fn todo_to_json(item: Todo) -> json.Json {
-  let #(seconds, _) = timestamp.to_unix_seconds_and_nanoseconds(item.created_at)
   json.object([
     #("id", json.string(uuid.to_string(item.id))),
     #("title", json.string(item.title)),
     #("completed", json.bool(item.completed)),
-    #("createdAt", json.int(seconds)),
+    #(
+      "createdAt",
+      json.string(timestamp.to_rfc3339(item.created_at, calendar.utc_offset)),
+    ),
   ])
 }
 

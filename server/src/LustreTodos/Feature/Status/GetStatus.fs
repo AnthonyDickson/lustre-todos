@@ -34,7 +34,7 @@ type StatusResponse = {
     Environment : string
 
     /// <summary>UTC time the server process started.</summary>
-    StartedAt : DateTime
+    StartedAt : DateTimeOffset
 
     /// <summary>Seconds elapsed since the server process started.</summary>
     UptimeSeconds : int64
@@ -121,7 +121,7 @@ module GetStatus =
     let private handler
         (queryContext : QueryContextFactory)
         (environment : string)
-        (startedAt : DateTime)
+        (startedAt : DateTimeOffset)
         : EndpointHandler =
         fun (ctx : HttpContext) ->
             task {
@@ -131,7 +131,7 @@ module GetStatus =
                 let! database, logEntries = checkDatabase queryContext cts.Token
                 (RequestLog.fromContext ctx).AddMany logEntries
 
-                let uptime = DateTime.UtcNow - startedAt
+                let uptime = DateTimeOffset.UtcNow - startedAt
 
                 let response = {
                     Version = version ()
@@ -150,7 +150,7 @@ module GetStatus =
 
     /// <summary>The status endpoint, with its own short-timeout connection so a slow database cannot stall
     /// the probe.</summary>
-    let endpoint (connectionString : string) (environment : string) (startedAt : DateTime) =
+    let endpoint (connectionString : string) (environment : string) (startedAt : DateTimeOffset) =
         route Path (handler (createProbeFactory connectionString) environment startedAt)
         |> addOpenApi (
             OpenApiConfig (

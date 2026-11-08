@@ -46,10 +46,6 @@ let private addOpenApiToBuilder (builder : WebApplicationBuilder) (ouath2 : OAut
     builder.Services.AddOpenApi (fun options ->
         options.AddSchemaTransformer<FSharpOptionSchemaTransformer> () |> ignore
         options.AddSchemaTransformer<OpenApi.FSharpRecordSchemaTransformer> () |> ignore
-
-        options.AddSchemaTransformer<OpenApi.DateTimeAsUnixTimestampTransformer> ()
-        |> ignore
-
         options.AddSchemaTransformer<OpenApi.XmlDocSchemaTransformer> () |> ignore
         options.AddSchemaTransformer<OpenApi.SchemaHintTransformer> () |> ignore
         options.AddSchemaTransformer<OpenApi.DecimalSchemaTransformer> () |> ignore
@@ -243,7 +239,9 @@ let private withAuth endpoints =
 
 let private buildEndpoints (connectionString : string) (loginReturnUrl : string) (app : WebApplication) =
     let queryContext = QueryContextFactory.Create connectionString
-    let startedAt = Process.GetCurrentProcess().StartTime.ToUniversalTime ()
+
+    let startedAt =
+        System.DateTimeOffset (Process.GetCurrentProcess().StartTime.ToUniversalTime ())
 
     let authEndpoints = [
         GET [ Login.endpoint loginReturnUrl ]
