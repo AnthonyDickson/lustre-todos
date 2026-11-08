@@ -72,3 +72,12 @@ export function setTitle(title) {
 export function getOrigin() {
   return globalThis.location.origin;
 }
+
+// Return a copy of `request` that aborts once `timeoutMs` elapse. gleam_fetch
+// has no abort API, so the signal must be attached here. The request body is
+// consumed by the original fetch call only, and cloning a Request whose body
+// is a string re-creates its stream, so the clone is still sendable.
+// On abort the fetch rejects with a browser-provided TimeoutError DOMException.
+export function withTimeoutSignal(request, timeoutMs) {
+  return new Request(request, { signal: AbortSignal.timeout(timeoutMs) });
+}

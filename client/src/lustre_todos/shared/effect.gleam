@@ -3,6 +3,7 @@ import gleam/http/request
 import gleam/io
 import gleam/javascript/promise
 import gleam/list
+import gleam/option.{type Option, None, Some}
 import lustre_todos/shared/http_effect.{
   type HttpError, type HttpMethod, Delete, Get, Patch, Post, Put, send,
 }
@@ -28,6 +29,10 @@ pub type Effect(msg) {
     content_type: String,
     callback: fn(Result(String, HttpError)) -> msg,
     transform: fn(request.Request(String)) -> request.Request(String),
+    /// Milliseconds after which the transport aborts the request and the
+    /// callback receives `Error(NetworkError(..))`. `None` (the default)
+    /// means no timeout.
+    timeout: Option(Int),
   )
   LoadFromStore(key: String, callback: fn(Result(String, String)) -> msg)
   SaveToStore(key: String, value: String)
@@ -68,6 +73,7 @@ pub fn get(
     content_type: "",
     callback:,
     transform: function.identity,
+    timeout: None,
   )
 }
 
@@ -94,6 +100,7 @@ pub fn post(
     content_type: "application/json",
     callback:,
     transform: function.identity,
+    timeout: None,
   )
 }
 
@@ -120,6 +127,7 @@ pub fn put(
     content_type: "application/json",
     callback:,
     transform: function.identity,
+    timeout: None,
   )
 }
 
@@ -146,6 +154,7 @@ pub fn patch(
     content_type: "application/json",
     callback:,
     transform: function.identity,
+    timeout: None,
   )
 }
 
@@ -171,7 +180,26 @@ pub fn delete(
     content_type: "",
     callback:,
     transform: function.identity,
+    timeout: None,
   )
+}
+
+/// Bound an HTTP effect with a timeout (in milliseconds). When the request
+/// has not completed within `timeout`, the transport aborts it and the
+/// callback receives `Error(NetworkError(..))`.
+///
+/// ```gleam
+/// effect.post("/api/todos", body, callback)
+/// |> effect.with_timeout(10_000)
+/// ```
+///
+/// Non-HTTP effects are returned unchanged.
+///
+pub fn with_timeout(effect: Effect(msg), timeout: Int) -> Effect(msg) {
+  case effect {
+    HttpRequest(..) as request -> HttpRequest(..request, timeout: Some(timeout))
+    other -> other
+  }
 }
 
 /// Set up client-side routing: intercept clicks on internal links, listen for
@@ -258,7 +286,15 @@ fn raw_set_title(title: String) -> Nil
 pub fn map(effect: Effect(a), f: fn(a) -> b) -> Effect(b) {
   case effect {
     Message(message) -> Message(f(message))
-    HttpRequest(method:, url:, body:, content_type:, callback:, transform:) ->
+    HttpRequest(
+      method:,
+      url:,
+      body:,
+      content_type:,
+      callback:,
+      transform:,
+      timeout:,
+    ) ->
       HttpRequest(
         method:,
         url:,
@@ -266,6 +302,7 @@ pub fn map(effect: Effect(a), f: fn(a) -> b) -> Effect(b) {
         content_type:,
         callback: fn(result) { f(callback(result)) },
         transform:,
+        timeout:,
       )
     LoadFromStore(key:, callback:) ->
       LoadFromStore(key:, callback: fn(result) { f(callback(result)) })
@@ -310,9 +347,17 @@ pub fn run(effect: Effect(msg), dispatch: fn(msg) -> Nil) -> Nil {
   case effect {
     Message(message) -> dispatch(message)
 
-    HttpRequest(method:, url:, body:, content_type:, callback:, transform:) -> {
+    HttpRequest(
+      method:,
+      url:,
+      body:,
+      content_type:,
+      callback:,
+      transform:,
+      timeout:,
+    ) -> {
       let _ =
-        send(method, url, body, content_type, transform)
+        send(method, url, body, content_type, transform, timeout)
         |> promise.map(fn(result) { dispatch(callback(result)) })
       Nil
     }

@@ -68,6 +68,10 @@ pub type Msg {
 
 const local_storage_key = "todomvc-lustre"
 
+/// How long a request may take before it fails, so a hung write is rolled back
+/// rather than left pending.
+const request_timeout_ms = 10_000
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 fn rollback(model: Model, action: TodoAction) -> Model {
@@ -201,6 +205,7 @@ fn fetch_todos() -> effect.Effect(Msg) {
         ClientFetchedTodos(Error(response.http_error_to_api_error(http_err)))
     }
   })
+  |> effect.with_timeout(request_timeout_ms)
 }
 
 fn load_todos_from_store() -> effect.Effect(Msg) {
@@ -292,6 +297,7 @@ pub fn update(
               )
           }
         })
+        |> effect.with_timeout(request_timeout_ms)
 
       #(
         Model(..model, new_todo: "", todos: list.append(model.todos, [item])),
@@ -335,6 +341,7 @@ pub fn update(
               )
           }
         })
+        |> effect.with_timeout(request_timeout_ms)
       #(Model(..model, todos:), patch_effect, [])
     }
 
@@ -404,6 +411,7 @@ pub fn update(
               )
           }
         })
+        |> effect.with_timeout(request_timeout_ms)
       #(Model(..model, edit_state: None, todos:), patch_effect, [])
     }
 
@@ -426,6 +434,7 @@ pub fn update(
               )
           }
         })
+        |> effect.with_timeout(request_timeout_ms)
 
       #(Model(..model, todos:), delete_effect, [])
     }
@@ -444,6 +453,7 @@ pub fn update(
               )
           }
         })
+        |> effect.with_timeout(request_timeout_ms)
       #(Model(..model, todos: active), delete_effect, [])
     }
 

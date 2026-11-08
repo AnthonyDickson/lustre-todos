@@ -97,9 +97,13 @@ Thin per-method constructors in `effect.gleam` delegate to `http_effect.send`:
 
 ```gleam
 effect.get("/api/todos", callback)
-effect.post(url, body, "application/json", callback)
+effect.post(url, body, callback)
 effect.delete(url, callback)
 ```
+
+Requests have no timeout unless one is set with `effect.with_timeout(ms)`; the
+transport then aborts the request and the callback gets a `NetworkError`. The
+todo page bounds every request, so a hung optimistic write is rolled back.
 
 ## Guard Helpers
 
