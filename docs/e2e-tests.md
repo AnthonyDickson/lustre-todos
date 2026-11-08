@@ -40,6 +40,19 @@ A test that would end the provider's session (e.g. following the logout
 redirect to Authelia) must stub that page, since the other tests in its worker
 log in again through that session.
 
+## Flakiness
+
+Tests run fully in parallel. A failing test is retried once to capture a trace,
+and the run fails if any test passes only on retry, so flakiness is reported
+rather than hidden. To check for order or parallelism dependencies, run the
+suite repeatedly without retries:
+
+```bash
+docker compose -f docker-compose.e2e.yml run --rm e2e \
+  sh -c "npm install && npx playwright test --retries=0 --repeat-each=4"
+docker compose -f docker-compose.e2e.yml down
+```
+
 ## Conventions
 
 - Tests create the data they need; they never depend on data from other tests.
