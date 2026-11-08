@@ -3,8 +3,8 @@ import gleam/json
 import gleam/list
 import gleam/option
 import gleam/string
-import lustre_todos/api_error
-import lustre_todos/http_effect.{type HttpError, HttpError, NetworkError}
+import lustre_todos/shared/api_error
+import lustre_todos/shared/http_effect.{type HttpError, HttpError, NetworkError}
 
 /// Render a list of field-level decode errors into a human-readable string.
 fn format_decode_errors(errors: List(decode.DecodeError)) -> String {

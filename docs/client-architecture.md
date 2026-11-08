@@ -3,9 +3,16 @@
 Gleam/Lustre SPA with nested MVU. All I/O goes through a custom `Effect` type
 with a single interpreter — `update` functions stay pure.
 
+## Layout
+
+Modules every page uses live in `lustre_todos/shared/`. Each page is a folder,
+`lustre_todos/<name>_page/`, holding the page module and the types and codecs
+only it uses. Pages never import each other; a module moves to `shared/` when a
+second page needs it. Tests mirror the source layout.
+
 ## Nested MVU
 
-Two layers: `app.gleam` (shell + routing) delegates to `todo_page.gleam`
+Two layers: `app.gleam` (shell + routing) delegates to `todo_page/todo_page.gleam`
 (feature page). Child `update` functions return a third element — a list of
 `OutMsg` values signalling app-level concerns to the shell:
 

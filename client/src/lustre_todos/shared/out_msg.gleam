@@ -1,5 +1,5 @@
 import gleam/option.{type Option}
-import lustre_todos/toast.{type ToastLevel}
+import lustre_todos/shared/toast.{type ToastLevel}
 
 /// Messages that are sent from child modules to the parent (root) module.
 pub type OutMsg {

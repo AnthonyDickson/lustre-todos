@@ -2,12 +2,12 @@ import gleam/list
 import gleam/option.{None, Some}
 import gleam/time/timestamp.{type Timestamp}
 import gleeunit/should
-import lustre_todos/api_error
-import lustre_todos/effect.{HttpRequest, Message}
-import lustre_todos/http_effect.{Delete}
-import lustre_todos/out_msg
-import lustre_todos/todo_item.{type Todo}
-import lustre_todos/todo_page
+import lustre_todos/shared/api_error
+import lustre_todos/shared/effect.{HttpRequest, Message}
+import lustre_todos/shared/http_effect.{Delete}
+import lustre_todos/shared/out_msg
+import lustre_todos/todo_page/todo_item.{type Todo}
+import lustre_todos/todo_page/todo_page
 import youid/uuid.{type Uuid}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@ import gleam/http/request
 import gleam/io
 import gleam/javascript/promise
 import gleam/list
-import lustre_todos/http_effect.{
+import lustre_todos/shared/http_effect.{
   type HttpError, type HttpMethod, Delete, Get, Patch, Post, Put, send,
 }
 

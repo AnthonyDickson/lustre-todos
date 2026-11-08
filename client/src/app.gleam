@@ -5,11 +5,11 @@ import lustre
 import lustre/effect as lustre_effect
 import lustre/element.{type Element}
 import lustre/element/html
-import lustre_todos/effect
-import lustre_todos/http_effect
-import lustre_todos/out_msg.{type OutMsg}
-import lustre_todos/toast.{type Toast}
-import lustre_todos/todo_page
+import lustre_todos/shared/effect
+import lustre_todos/shared/http_effect
+import lustre_todos/shared/out_msg.{type OutMsg}
+import lustre_todos/shared/toast.{type Toast}
+import lustre_todos/todo_page/todo_page
 import youid/uuid.{type Uuid}
 
 pub type Model {

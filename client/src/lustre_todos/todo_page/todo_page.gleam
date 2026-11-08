@@ -10,13 +10,13 @@ import lustre/attribute
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import lustre_todos/api_error
-import lustre_todos/effect
-import lustre_todos/guard
-import lustre_todos/out_msg.{type OutMsg}
-import lustre_todos/response
-import lustre_todos/toast
-import lustre_todos/todo_item
+import lustre_todos/shared/api_error
+import lustre_todos/shared/effect
+import lustre_todos/shared/guard
+import lustre_todos/shared/out_msg.{type OutMsg}
+import lustre_todos/shared/response
+import lustre_todos/shared/toast
+import lustre_todos/todo_page/todo_item
 import youid/uuid
 
 // ── Types ────────────────────────────────────────────────────────────────────

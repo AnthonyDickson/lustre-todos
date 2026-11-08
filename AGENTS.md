@@ -80,18 +80,24 @@ client/
     app.gleam                         # Entry point + app shell + routing
     app.css                           # Tailwind CSS v4 entry
     main.js                           # Vite entry point
-    lustre_todos/                     # Example feature module (rename for your domain)
-      todo_page.gleam                 # Full MVC (model, update, view)
-      effect.gleam                    # Effect type + interpreter + HTTP constructors
-      http_effect.gleam               # HTTP transport: HttpMethod, HttpError, send/send_with
-      effect_ffi.mjs                  # Browser FFI (localStorage, redirect, navigation)
-      response.gleam                  # Decode helpers + JSON error formatting
-      todo_item.gleam                 # Domain types + JSON codecs
-      api_error.gleam                 # ApiError type + JSON codec
-      guard.gleam                     # use-compatible early-return for Option/Result
-  test/
     lustre_todos/
-      todo_page_test.gleam            # Pure unit tests for update logic
+      shared/                         # Modules every page uses
+        effect.gleam                  # Effect type + interpreter + HTTP constructors
+        http_effect.gleam             # HTTP transport: HttpMethod, HttpError, send
+        effect_ffi.mjs                # Browser FFI (localStorage, redirect, navigation)
+        response.gleam                # Decode helpers + JSON error formatting
+        api_error.gleam               # ApiError type + JSON codec
+        guard.gleam                   # use-compatible early-return for Option/Result
+        out_msg.gleam                 # Messages from a page to the app shell
+        toast.gleam                   # Toast type + view
+      todo_page/                      # Example page (rename for your domain)
+        todo_page.gleam               # Full MVC (model, update, view)
+        todo_item.gleam               # Domain types + JSON codecs
+  test/
+    app_test.gleam                    # App shell tests (401 interception)
+    lustre_todos/
+      todo_page/
+        todo_page_test.gleam          # Pure unit tests for update logic
 tests/
   e2e/
     global-setup.ts                   # OIDC login before test suite

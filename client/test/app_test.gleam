@@ -1,7 +1,7 @@
 import app
 import gleeunit/should
-import lustre_todos/effect
-import lustre_todos/http_effect
+import lustre_todos/shared/effect
+import lustre_todos/shared/http_effect
 
 // ── 401 interception ──────────────────────────────────────────────────────────
 // `wrap_http_requests` rewrites every `HttpRequest` callback so a 401 response
