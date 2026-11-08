@@ -102,11 +102,13 @@ effect.delete(url, callback)
 
 ## Guard Helpers
 
-`guard.gleam` provides `use`-compatible early-return for `Option` and `Result`:
+`guard.gleam` provides `use`-compatible early-return for `Option` and `Result`.
+`some` and `ok` take the fallback value; `some_lazy` and `ok_lazy` take a
+function, for a fallback that is costly to build or needs the error:
 
 ```gleam
-use value <- guard.some(in: my_option, else_return: fn() { fallback })
-use value <- guard.ok(in: my_result, else_return: fn(e) { handle_error(e) })
+use value <- guard.some(in: my_option, else_return: fallback)
+use value <- guard.ok_lazy(in: my_result, else_return: fn(e) { handle_error(e) })
 ```
 
 ## Routing

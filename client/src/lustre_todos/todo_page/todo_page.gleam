@@ -321,9 +321,7 @@ pub fn update(
     UserToggledCompletedStatus(id) -> {
       use item <- guard.ok(
         in: list.find(model.todos, fn(t) { t.id == id }),
-        else_return: fn(_) {
-          #(Model(..model, edit_state: None), effect.none(), [])
-        },
+        else_return: #(Model(..model, edit_state: None), effect.none(), []),
       )
 
       let updated_item = todo_item.Todo(..item, completed: !item.completed)
@@ -382,9 +380,7 @@ pub fn update(
     UserSubmittedEditedTodo -> {
       use EditState(id:, new_title:) <- guard.some(
         in: model.edit_state,
-        else_return: fn() {
-          #(Model(..model, edit_state: None), effect.none(), [])
-        },
+        else_return: #(Model(..model, edit_state: None), effect.none(), []),
       )
       let new_title = string.trim(new_title)
 
@@ -398,9 +394,7 @@ pub fn update(
 
       use item <- guard.ok(
         in: list.find(model.todos, fn(t) { t.id == id }),
-        else_return: fn(_) {
-          #(Model(..model, edit_state: None), effect.none(), [])
-        },
+        else_return: #(Model(..model, edit_state: None), effect.none(), []),
       )
 
       let todos =
@@ -434,7 +428,7 @@ pub fn update(
     UserDeletedTodo(id) -> {
       use item_to_remove <- guard.ok(
         in: list.find(model.todos, fn(t) { t.id == id }),
-        else_return: fn(_) { #(model, effect.none(), []) },
+        else_return: #(model, effect.none(), []),
       )
 
       let todos = list.filter(model.todos, fn(t) { t.id != id })
