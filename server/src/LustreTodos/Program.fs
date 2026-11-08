@@ -25,8 +25,6 @@ open Oxpecker
 open Oxpecker.OpenApi
 open Scalar.AspNetCore
 open Serilog
-open Serilog.Events
-open Serilog.Formatting.Compact
 
 open LustreTodos.Data.Db
 open LustreTodos.Feature.Auth
@@ -37,6 +35,7 @@ open LustreTodos.Shared.ApiError
 open LustreTodos.Shared.Auth
 open LustreTodos.Shared.Config
 open LustreTodos.Shared.Json
+open LustreTodos.Shared.Logging
 open LustreTodos.Shared.OpenApi
 
 
@@ -172,72 +171,6 @@ let private handleException
         }
         :> Task)
 
-let private configureSerilog
-    (loggingOptions : LoggingConfig)
-    (ctx : HostBuilderContext)
-    (config : LoggerConfiguration)
-    =
-    let filePath =
-        loggingOptions.FilePath
-        |> Option.ofObj
-        |> Option.filter (not << System.String.IsNullOrWhiteSpace)
-
-    // The app's request log records every request, so the framework's own
-    // per-request logs (routing, static files, hosting diagnostics) only
-    // duplicate it. Warnings and errors still come through.
-    config.MinimumLevel
-        .Information()
-        .MinimumLevel.Override ("Microsoft.AspNetCore", LogEventLevel.Warning)
-    |> ignore
-
-    // Filter out healthcheck noise for the status endpoint. Framework
-    // per-request logs (Microsoft.AspNetCore.Hosting.Diagnostics) carry no
-    // status code, so they are dropped whenever the path matches. The app's own
-    // buffered request-log summary does carry the status code, so only
-    // successful probes are dropped; failures (503) stay visible.
-    config.Filter.ByExcluding (fun (e : LogEvent) ->
-        let prop name =
-            match e.Properties.TryGetValue name with
-            | true, (:? ScalarValue as sv) -> string sv.Value
-            | _ -> ""
-
-        let source = prop "SourceContext"
-        let requestPath = prop "RequestPath"
-
-        let statusCode =
-            match e.Properties.TryGetValue "StatusCode" with
-            | true, (:? ScalarValue as sv) ->
-                match System.Int32.TryParse (string sv.Value) with
-                | true, code -> code
-                | _ -> 0
-            | _ -> 0
-
-        let isStatusProbe = requestPath.StartsWith GetStatus.Path
-
-        let isFrameworkLog =
-            source.StartsWith "Microsoft.AspNetCore"
-            || source.StartsWith "Microsoft.Hosting"
-
-        isStatusProbe && (isFrameworkLog || statusCode < 400))
-    |> ignore
-
-    config.WriteTo.Console (RenderedCompactJsonFormatter ()) |> ignore
-
-    match filePath with
-    | Some path ->
-        // Roll at 10 MB and keep 10 files, bounding the log at about 100 MB.
-        // Without rolling, the sink stops writing once the file reaches its 1
-        // GB default limit.
-        config.WriteTo.File (
-            RenderedCompactJsonFormatter (),
-            path,
-            fileSizeLimitBytes = 10L * 1024L * 1024L,
-            rollOnFileSizeLimit = true,
-            retainedFileCountLimit = 10
-        )
-        |> ignore
-    | None -> ()
-
 let private apiNotFound : RequestDelegate =
     RequestDelegate (fun (ctx : HttpContext) ->
         ctx.Response.StatusCode <- 404
@@ -345,7 +278,8 @@ let private configureBuilder
         options.Limits.MaxRequestBodySize <- 65536L)
     |> ignore
 
-    builder.Host.UseSerilog (configureSerilog config.Logging) |> ignore
+    builder.Host.UseSerilog (Logging.configure GetStatus.Path config.Logging)
+    |> ignore
 
     match config.Oauth2 with
     | Some config when isDevelopment -> addOpenApiToBuilder builder config
