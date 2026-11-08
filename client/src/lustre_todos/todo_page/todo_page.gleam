@@ -14,6 +14,7 @@ import lustre_todos/shared/api_error
 import lustre_todos/shared/effect
 import lustre_todos/shared/guard
 import lustre_todos/shared/out_msg.{type OutMsg}
+import lustre_todos/shared/remote.{type Remote, Failed, Loaded, Loading}
 import lustre_todos/shared/response
 import lustre_todos/shared/route
 import lustre_todos/todo_page/todo_item
@@ -42,7 +43,8 @@ pub type TodoAction {
 pub type Model {
   Model(
     new_todo: String,
-    todos: List(todo_item.Todo),
+    /// `Loaded` once the server or the local copy has supplied the list.
+    todos: Remote(List(todo_item.Todo)),
     visibility: Visibility,
     edit_state: Option(EditState),
   )
@@ -51,6 +53,7 @@ pub type Model {
 pub type Msg {
   ClientLoadedTodos(todos: List(todo_item.Todo))
   ClientFetchedTodos(result: Result(List(todo_item.Todo), api_error.ApiError))
+  UserRetriedFetch
   TodoActionFailed(action: TodoAction, error: api_error.ApiError)
   UserChangedNewTodo(text: String)
   UserSubmittedNewTodo
@@ -75,12 +78,23 @@ const request_timeout_ms = 10_000
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+/// The list, or no todos while it is loading or failed to load. Actions find
+/// nothing in an empty list, so they do nothing until the list is loaded.
+fn loaded_todos(model: Model) -> List(todo_item.Todo) {
+  remote.unwrap(model.todos, or: [])
+}
+
+/// Replace the loaded list. While nothing is loaded the change is dropped.
+fn with_todos(model: Model, todos: List(todo_item.Todo)) -> Model {
+  Model(..model, todos: remote.map(model.todos, fn(_) { todos }))
+}
+
 fn rollback(model: Model, action: TodoAction) -> Model {
   case action {
     UpdateCompleted(id, previous_state) ->
-      Model(
-        ..model,
-        todos: list.map(model.todos, fn(t) {
+      with_todos(
+        model,
+        list.map(loaded_todos(model), fn(t) {
           case t.id == id {
             True -> todo_item.Todo(..t, completed: previous_state)
             False -> t
@@ -88,9 +102,9 @@ fn rollback(model: Model, action: TodoAction) -> Model {
         }),
       )
     UpdateTitle(id, previous_title) ->
-      Model(
-        ..model,
-        todos: list.map(model.todos, fn(t) {
+      with_todos(
+        model,
+        list.map(loaded_todos(model), fn(t) {
           case t.id == id {
             True -> todo_item.Todo(..t, title: previous_title)
             False -> t
@@ -98,22 +112,22 @@ fn rollback(model: Model, action: TodoAction) -> Model {
         }),
       )
     Create(id) ->
-      Model(..model, todos: list.filter(model.todos, fn(t) { t.id != id }))
+      with_todos(model, list.filter(loaded_todos(model), fn(t) { t.id != id }))
     Delete(previous_todo) -> {
       let todos =
-        list.append(model.todos, [previous_todo])
+        list.append(loaded_todos(model), [previous_todo])
         |> list.sort(fn(a, b) {
           string.compare(uuid.to_string(a.id), uuid.to_string(b.id))
         })
-      Model(..model, todos:)
+      with_todos(model, todos)
     }
     DeleteCompleted(completed_todos) -> {
       let todos =
-        list.append(model.todos, completed_todos)
+        list.append(loaded_todos(model), completed_todos)
         |> list.sort(fn(a, b) {
           string.compare(uuid.to_string(a.id), uuid.to_string(b.id))
         })
-      Model(..model, todos:)
+      with_todos(model, todos)
     }
   }
 }
@@ -121,7 +135,7 @@ fn rollback(model: Model, action: TodoAction) -> Model {
 fn create_toast(model: Model, action: TodoAction) -> Option(out_msg.OutMsg) {
   case action {
     UpdateCompleted(id, previous_state) ->
-      case list.find(model.todos, fn(t) { t.id == id }) {
+      case list.find(loaded_todos(model), fn(t) { t.id == id }) {
         Ok(item) -> {
           let state_text = case previous_state {
             True -> "completed"
@@ -138,7 +152,7 @@ fn create_toast(model: Model, action: TodoAction) -> Option(out_msg.OutMsg) {
         Error(Nil) -> None
       }
     UpdateTitle(id, previous_title) ->
-      case list.find(model.todos, fn(t) { t.id == id }) {
+      case list.find(loaded_todos(model), fn(t) { t.id == id }) {
         Ok(item) ->
           Some(out_msg.error_toast(
             "Could not sync changes",
@@ -151,7 +165,7 @@ fn create_toast(model: Model, action: TodoAction) -> Option(out_msg.OutMsg) {
         Error(Nil) -> None
       }
     Create(id) ->
-      case list.find(model.todos, fn(t) { t.id == id }) {
+      case list.find(loaded_todos(model), fn(t) { t.id == id }) {
         Ok(item) ->
           Some(out_msg.error_toast(
             "Could not sync changes",
@@ -225,7 +239,7 @@ fn load_todos_from_store() -> effect.Effect(Msg) {
 // ── Init ─────────────────────────────────────────────────────────────────────
 
 pub fn init(visibility: Visibility) -> #(Model, effect.Effect(Msg)) {
-  let model = Model(new_todo: "", todos: [], visibility:, edit_state: None)
+  let model = Model(new_todo: "", todos: Loading, visibility:, edit_state: None)
 
   #(model, effect.batch([fetch_todos(), load_todos_from_store()]))
 }
@@ -237,22 +251,31 @@ pub fn update(
   msg: Msg,
 ) -> #(Model, effect.Effect(Msg), List(OutMsg)) {
   case msg {
-    ClientLoadedTodos(todos) -> #(Model(..model, todos:), effect.none(), [])
+    // The local copy shows while the server responds. It never replaces the
+    // server's list.
+    ClientLoadedTodos(todos) ->
+      case model.todos {
+        Loading -> #(Model(..model, todos: Loaded(todos)), effect.none(), [])
+        Loaded(_) | Failed -> #(model, effect.none(), [])
+      }
 
     ClientFetchedTodos(Ok(todos)) -> #(
-      Model(..model, todos:),
+      Model(..model, todos: Loaded(todos)),
       save_todos(todos),
       [],
     )
 
     ClientFetchedTodos(Error(error)) -> {
-      let title = "Could not sync todos"
-      let body = "Falling back to local data"
-
-      #(model, effect.LogError(api_error.describe(error)), [
-        out_msg.error_toast(title, body),
-      ])
+      let log = effect.LogError(api_error.describe(error))
+      case model.todos {
+        Loaded(_) -> #(model, log, [
+          out_msg.error_toast("Could not sync todos", "Showing local data"),
+        ])
+        Loading | Failed -> #(Model(..model, todos: Failed), log, [])
+      }
     }
+
+    UserRetriedFetch -> #(Model(..model, todos: Loading), fetch_todos(), [])
 
     TodoActionFailed(action, error) -> {
       let updated_model = rollback(model, action)
@@ -301,7 +324,10 @@ pub fn update(
         |> effect.with_timeout(request_timeout_ms)
 
       #(
-        Model(..model, new_todo: "", todos: list.append(model.todos, [item])),
+        with_todos(
+          Model(..model, new_todo: ""),
+          list.append(loaded_todos(model), [item]),
+        ),
         create_effect,
         [],
       )
@@ -309,13 +335,13 @@ pub fn update(
 
     UserToggledCompletedStatus(id) -> {
       use item <- guard.ok(
-        in: list.find(model.todos, fn(t) { t.id == id }),
+        in: list.find(loaded_todos(model), fn(t) { t.id == id }),
         else_return: #(Model(..model, edit_state: None), effect.none(), []),
       )
 
       let updated_item = todo_item.Todo(..item, completed: !item.completed)
       let todos =
-        list.map(model.todos, fn(t) {
+        list.map(loaded_todos(model), fn(t) {
           case t.id == id {
             True -> updated_item
             False -> t
@@ -343,11 +369,11 @@ pub fn update(
           }
         })
         |> effect.with_timeout(request_timeout_ms)
-      #(Model(..model, todos:), patch_effect, [])
+      #(with_todos(model, todos), patch_effect, [])
     }
 
     UserEnteredEditMode(id) ->
-      case list.find(model.todos, fn(t) { t.id == id }) {
+      case list.find(loaded_todos(model), fn(t) { t.id == id }) {
         Ok(item) -> #(
           Model(
             ..model,
@@ -383,12 +409,12 @@ pub fn update(
       })
 
       use item <- guard.ok(
-        in: list.find(model.todos, fn(t) { t.id == id }),
+        in: list.find(loaded_todos(model), fn(t) { t.id == id }),
         else_return: #(Model(..model, edit_state: None), effect.none(), []),
       )
 
       let todos =
-        list.map(model.todos, fn(t) {
+        list.map(loaded_todos(model), fn(t) {
           case t.id == id {
             True -> todo_item.Todo(..t, title: new_title)
             False -> t
@@ -413,16 +439,16 @@ pub fn update(
           }
         })
         |> effect.with_timeout(request_timeout_ms)
-      #(Model(..model, edit_state: None, todos:), patch_effect, [])
+      #(with_todos(Model(..model, edit_state: None), todos), patch_effect, [])
     }
 
     UserDeletedTodo(id) -> {
       use item_to_remove <- guard.ok(
-        in: list.find(model.todos, fn(t) { t.id == id }),
+        in: list.find(loaded_todos(model), fn(t) { t.id == id }),
         else_return: #(model, effect.none(), []),
       )
 
-      let todos = list.filter(model.todos, fn(t) { t.id != id })
+      let todos = list.filter(loaded_todos(model), fn(t) { t.id != id })
       let url = "/api/todos/" <> uuid.to_string(id)
       let delete_effect =
         effect.delete(url, fn(result) {
@@ -437,12 +463,12 @@ pub fn update(
         })
         |> effect.with_timeout(request_timeout_ms)
 
-      #(Model(..model, todos:), delete_effect, [])
+      #(with_todos(model, todos), delete_effect, [])
     }
 
     UserDeletedCompletedTodos -> {
       let #(completed, active) =
-        list.partition(model.todos, fn(t) { t.completed })
+        list.partition(loaded_todos(model), fn(t) { t.completed })
       let delete_effect =
         effect.delete("/api/todos/completed", fn(result) {
           case result {
@@ -455,7 +481,7 @@ pub fn update(
           }
         })
         |> effect.with_timeout(request_timeout_ms)
-      #(Model(..model, todos: active), delete_effect, [])
+      #(with_todos(model, active), delete_effect, [])
     }
 
     UserChangedVisibility(visibility) -> #(
@@ -475,16 +501,12 @@ pub fn update_with_storage(
   msg: Msg,
 ) -> #(Model, effect.Effect(Msg), List(OutMsg)) {
   let #(new_model, effects, out_msgs) = update(model, msg)
-  let todos_json =
-    new_model.todos
-    |> list.map(todo_item.todo_to_json)
-    |> json.preprocessed_array
-    |> json.to_string
-  #(
-    new_model,
-    effect.batch([effects, effect.SaveToStore(local_storage_key, todos_json)]),
-    out_msgs,
-  )
+  // Saving while nothing is loaded would replace the local copy with nothing.
+  let save = case new_model.todos {
+    Loaded(todos) -> save_todos(todos)
+    Loading | Failed -> effect.none()
+  }
+  #(new_model, effect.batch([effects, save]), out_msgs)
 }
 
 // ── View ─────────────────────────────────────────────────────────────────────
@@ -574,7 +596,7 @@ fn visibility_classes(
 
 pub fn view(model: Model) -> Element(Msg) {
   let #(active_count, completed_count) =
-    list.fold(model.todos, #(0, 0), fn(acc, t) {
+    list.fold(loaded_todos(model), #(0, 0), fn(acc, t) {
       let #(active, completed) = acc
       case t.completed {
         True -> #(active, completed + 1)
@@ -584,7 +606,7 @@ pub fn view(model: Model) -> Element(Msg) {
 
   let todo_count = active_count + completed_count
 
-  let visible_todos = visible_todos(model.todos, model.visibility)
+  let visible_todos = visible_todos(loaded_todos(model), model.visibility)
 
   html.div([attribute.class("bg-gray-100 h-dvh flex h-screen justify-center")], [
     html.main([], [
@@ -601,6 +623,10 @@ pub fn view(model: Model) -> Element(Msg) {
           attribute.value(model.new_todo),
           attribute.placeholder("What needs to be done?"),
           attribute.attribute("data-testid", "new-todo-input"),
+          attribute.disabled(case model.todos {
+            Loaded(_) -> False
+            Loading | Failed -> True
+          }),
           attribute.class(
             "text-gray-600 text-2xl bg-gray-50 drop-shadow-sm focus-visible:outline-none py-5 px-15 min-w-xl placeholder:text-2xl placeholder:text-gray-300 placeholder:italic",
           ),
@@ -613,10 +639,41 @@ pub fn view(model: Model) -> Element(Msg) {
           }),
         ]),
       ]),
-      html.ol(
-        [attribute.class("drop-shadow-sm")],
-        list.map(visible_todos, todo_list_item(model.edit_state, _)),
-      ),
+      case model.todos {
+        Loaded(_) ->
+          html.ol(
+            [attribute.class("drop-shadow-sm")],
+            list.map(visible_todos, todo_list_item(model.edit_state, _)),
+          )
+        Loading ->
+          html.p(
+            [
+              attribute.class("text-gray-400 text-center py-5"),
+              attribute.attribute("data-testid", "todos-loading"),
+            ],
+            [element.text("Loading…")],
+          )
+        Failed ->
+          html.div(
+            [
+              attribute.class(
+                "text-gray-500 flex flex-col items-center gap-2 py-5",
+              ),
+              attribute.attribute("data-testid", "todos-failed"),
+            ],
+            [
+              html.p([], [element.text("Could not load your todos.")]),
+              html.button(
+                [
+                  attribute.class("text-rose-400 hover:underline"),
+                  attribute.attribute("data-testid", "retry-fetch"),
+                  event.on_click(UserRetriedFetch),
+                ],
+                [element.text("Try again")],
+              ),
+            ],
+          )
+      },
       case todo_count > 0 {
         True ->
           html.footer(

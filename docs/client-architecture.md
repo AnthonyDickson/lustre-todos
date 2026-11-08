@@ -105,6 +105,20 @@ Requests have no timeout unless one is set with `effect.with_timeout(ms)`; the
 transport then aborts the request and the callback gets a `NetworkError`. The
 todo page bounds every request, so a hung optimistic write is rolled back.
 
+## Remote Data
+
+Data a page fetches is a `Remote(a)` (`shared/remote.gleam`): `Loading`,
+`Loaded(a)`, or `Failed`. The view shows each state, so a page never renders an
+empty list while it waits or after a fetch fails; `Failed` offers a retry.
+`remote.map` changes loaded data and drops a change made while nothing is
+loaded, and `remote.unwrap` reads it with a default.
+
+The todo page also keeps a copy of the list in `localStorage`. The copy shows
+while the server responds but never replaces the server's list, and a failed
+fetch with the copy showing only warns. Nothing is saved while the list is not
+loaded, so a slow or failed fetch cannot wipe the copy. Drop the copy for data
+that must not be left in a shared browser.
+
 ## Guard Helpers
 
 `guard.gleam` provides `use`-compatible early-return for `Option` and `Result`.

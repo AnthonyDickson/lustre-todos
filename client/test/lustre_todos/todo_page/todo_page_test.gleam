@@ -6,6 +6,7 @@ import lustre_todos/shared/api_error
 import lustre_todos/shared/effect.{HttpRequest, Message}
 import lustre_todos/shared/http_effect.{Delete}
 import lustre_todos/shared/out_msg
+import lustre_todos/shared/remote.{Failed, Loaded, Loading}
 import lustre_todos/todo_page/todo_item.{type Todo}
 import lustre_todos/todo_page/todo_page
 import youid/uuid.{type Uuid}
@@ -58,10 +59,14 @@ fn todo3() -> Todo {
   )
 }
 
+fn todos_of(model: todo_page.Model) -> List(Todo) {
+  remote.unwrap(model.todos, or: [])
+}
+
 fn empty_model() -> todo_page.Model {
   todo_page.Model(
     new_todo: "",
-    todos: [],
+    todos: Loaded([]),
     visibility: todo_page.All,
     edit_state: None,
   )
@@ -70,7 +75,7 @@ fn empty_model() -> todo_page.Model {
 fn model_with_todos() -> todo_page.Model {
   todo_page.Model(
     new_todo: "",
-    todos: [todo1(), todo2()],
+    todos: Loaded([todo1(), todo2()]),
     visibility: todo_page.All,
     edit_state: None,
   )
@@ -83,10 +88,13 @@ fn model_with_todos() -> todo_page.Model {
 pub fn update_todo_action_failed_non_401_rolls_back_test() {
   // Given a model where a todo was optimistically toggled
   let model =
-    todo_page.Model(..empty_model(), todos: [
-      todo_item.Todo(..todo1(), completed: True),
-      todo2(),
-    ])
+    todo_page.Model(
+      ..empty_model(),
+      todos: Loaded([
+        todo_item.Todo(..todo1(), completed: True),
+        todo2(),
+      ]),
+    )
 
   // When that toggle fails with a non-401 error
   let #(new_model, _effect, _out_msgs) =
@@ -105,7 +113,7 @@ pub fn update_todo_action_failed_non_401_rolls_back_test() {
 
   // Then the optimistic change should be rolled back
   let assert Ok(item) =
-    list.find(new_model.todos, fn(item) { item.id == id1() })
+    list.find(todos_of(new_model), fn(item) { item.id == id1() })
   item.completed |> should.equal(False)
 }
 
@@ -129,7 +137,8 @@ pub fn update_submit_edited_empty_title_deletes_test() {
   // Then the edit state should be cleared
   new_model.edit_state |> should.equal(None)
   // And the todo should still be present (deletion is scheduled via After)
-  let assert Ok(_) = list.find(new_model.todos, fn(item) { item.id == id1() })
+  let assert Ok(_) =
+    list.find(todos_of(new_model), fn(item) { item.id == id1() })
   // And an effect to delete the todo should be produced
   let assert Message(todo_page.UserDeletedTodo(id)) = effect
   id |> should.equal(id1())
@@ -148,8 +157,8 @@ pub fn update_delete_todo_test() {
     todo_page.update(model, todo_page.UserDeletedTodo(id2()))
 
   // Then the deleted todo should be removed
-  new_model.todos |> list.length |> should.equal(1)
-  let assert [item] = new_model.todos
+  todos_of(new_model) |> list.length |> should.equal(1)
+  let assert [item] = todos_of(new_model)
   item.id |> should.equal(id1())
   // And a DELETE effect should be produced
   let assert HttpRequest(method: Delete, url:, ..) = effect
@@ -165,16 +174,16 @@ pub fn update_delete_todo_test() {
 pub fn update_delete_completed_todos_batches_test() {
   // Given a model with three todos, two of which are completed
   let model =
-    todo_page.Model(..empty_model(), todos: [todo1(), todo2(), todo3()])
+    todo_page.Model(..empty_model(), todos: Loaded([todo1(), todo2(), todo3()]))
 
   // When the user clears completed todos
   let #(new_model, effect, _out_msgs) =
     todo_page.update(model, todo_page.UserDeletedCompletedTodos)
 
   // Then all completed todos are deleted
-  new_model.todos |> list.length |> should.equal(1)
+  todos_of(new_model) |> list.length |> should.equal(1)
   let assert Ok(todo_item.Todo(completed: False, ..)) =
-    list.first(new_model.todos)
+    list.first(todos_of(new_model))
   // And the effect should be a request for batch deletion
   let assert effect.HttpRequest(
     method: http_effect.Delete,
@@ -189,7 +198,8 @@ pub fn update_delete_completed_todos_batches_test() {
 // the list on every network blip, breaking the user's mental model of order.
 pub fn update_todo_action_failed_delete_rolls_back_in_order_test() {
   // Given a model where todo2 was optimistically deleted (only todo1 and todo3 remain)
-  let model = todo_page.Model(..empty_model(), todos: [todo1(), todo3()])
+  let model =
+    todo_page.Model(..empty_model(), todos: Loaded([todo1(), todo3()]))
 
   // When that delete fails with a non-401 error
   let #(new_model, _effect, _out_msgs) =
@@ -207,8 +217,8 @@ pub fn update_todo_action_failed_delete_rolls_back_in_order_test() {
     )
 
   // Then todo2 should be re-inserted in sorted order (by UUID string)
-  new_model.todos |> list.length |> should.equal(3)
-  let assert [a, b, c] = new_model.todos
+  todos_of(new_model) |> list.length |> should.equal(3)
+  let assert [a, b, c] = todos_of(new_model)
   a.id |> should.equal(id1())
   b.id |> should.equal(id2())
   c.id |> should.equal(id3())
@@ -221,10 +231,13 @@ pub fn update_todo_action_failed_delete_rolls_back_in_order_test() {
 pub fn update_todo_action_failed_401_rolls_back_test() {
   // Given a model where a todo was optimistically toggled
   let model =
-    todo_page.Model(..empty_model(), todos: [
-      todo_item.Todo(..todo1(), completed: True),
-      todo2(),
-    ])
+    todo_page.Model(
+      ..empty_model(),
+      todos: Loaded([
+        todo_item.Todo(..todo1(), completed: True),
+        todo2(),
+      ]),
+    )
 
   // When that toggle fails with a 401
   let #(new_model, effect, out_msgs) =
@@ -243,10 +256,76 @@ pub fn update_todo_action_failed_401_rolls_back_test() {
 
   // Then the optimistic change should be rolled back
   let assert Ok(item) =
-    list.find(new_model.todos, fn(item) { item.id == id1() })
+    list.find(todos_of(new_model), fn(item) { item.id == id1() })
   item.completed |> should.equal(False)
   // And an error toast should be requested (no redirect to login)
   out_msgs |> list.length |> should.equal(1)
   let assert Ok(out_msg.PageRequestedToast(..)) = list.first(out_msgs)
   let assert effect.LogError(_) = effect
+}
+
+// Loading: the local copy, the server's list, and failures
+// INVARIANT: The local copy shows only while the server has not answered, and
+// never replaces the server's list. A failed fetch with nothing to show offers
+// a retry; with the local copy showing, it only warns.
+pub fn local_copy_shows_while_loading_test() {
+  let model = todo_page.Model(..empty_model(), todos: Loading)
+
+  let #(model, _, _) =
+    todo_page.update(model, todo_page.ClientLoadedTodos([todo1()]))
+
+  model.todos |> should.equal(Loaded([todo1()]))
+}
+
+pub fn local_copy_does_not_replace_the_servers_list_test() {
+  let model = todo_page.Model(..empty_model(), todos: Loaded([todo2()]))
+
+  let #(model, _, _) =
+    todo_page.update(model, todo_page.ClientLoadedTodos([todo1()]))
+
+  model.todos |> should.equal(Loaded([todo2()]))
+}
+
+pub fn failed_fetch_with_nothing_to_show_offers_a_retry_test() {
+  let model = todo_page.Model(..empty_model(), todos: Loading)
+
+  let #(model, _, out_msgs) =
+    todo_page.update(model, todo_page.ClientFetchedTodos(Error(server_error())))
+
+  model.todos |> should.equal(Failed)
+  out_msgs |> should.equal([])
+
+  let #(model, effect, _) = todo_page.update(model, todo_page.UserRetriedFetch)
+
+  model.todos |> should.equal(Loading)
+  let assert HttpRequest(method: http_effect.Get, url: "/api/todos", ..) =
+    effect
+}
+
+pub fn failed_fetch_keeps_the_local_copy_test() {
+  let model = todo_page.Model(..empty_model(), todos: Loaded([todo1()]))
+
+  let #(model, _, out_msgs) =
+    todo_page.update(model, todo_page.ClientFetchedTodos(Error(server_error())))
+
+  model.todos |> should.equal(Loaded([todo1()]))
+  out_msgs |> list.length |> should.equal(1)
+}
+
+pub fn nothing_is_saved_while_loading_test() {
+  let model = todo_page.Model(..empty_model(), todos: Loading)
+
+  let #(_, effect, _) =
+    todo_page.update_with_storage(model, todo_page.UserChangedNewTodo("a"))
+
+  let assert effect.Batch([_, effect.NoEffect]) = effect
+}
+
+fn server_error() -> api_error.ApiError {
+  api_error.ApiError(
+    error: "Server Error",
+    details: "Something went wrong",
+    status_code: Some(500),
+    request_id: None,
+  )
 }
