@@ -151,6 +151,10 @@ jobs:
       - run: dotnet fsharplint lint LustreTodos.slnx
         working-directory: server
 
+      - run: ./scripts/check-architecture.sh
+
+      - run: ./scripts/check-strings.sh
+
       - if: failure()
         run: |
           echo "F# linting failed. Run 'just lint' locally to see the issues and fix them."
