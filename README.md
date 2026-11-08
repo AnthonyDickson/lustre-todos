@@ -45,7 +45,8 @@ See the [Justfile](./justfile) for all targets.
 ## How It Works
 
 - **Backend** — Oxpecker on .NET 10 with OIDC auth (cookie + JWT bearer).
-  Endpoints live in vertical slices (one file per domain). SQLite with DbUp
+  Endpoints live in vertical slices (one folder per feature, one file per
+  operation). SQLite with DbUp
   migrations and SqlHydra type-safe queries. OpenAPI spec at `/openapi/v1.json`,
   interactive API docs at `/scalar/v1`. See [Database](docs/database.md).
 - **Frontend** — Gleam/Lustre SPA with nested MVU. A custom `Effect` type
@@ -53,7 +54,7 @@ See the [Justfile](./justfile) for all targets.
   one interpreter. See [Client Architecture](docs/client-architecture.md).
 - **Auth** — Dev OIDC via Authelia (`docker compose up -d`, test user
   `dev`/`dev-password`). See [Production OIDC Setup](docs/prod-oidc-setup.md).
-- **Testing** — xUnit server tests, gleeunit client unit tests, Playwright E2E
+- **Testing** — Expecto server tests, gleeunit client unit tests, Playwright E2E
   tests via Docker Compose. See `docs/server-tests.md`, `docs/client-architecture.md#client-tests`, and `docs/e2e-tests.md`.
 - **Deployment** — Single-file publish (`just publish`) or Docker
   (`docker build` + `docker compose -f docker-compose.prod.yml up -d`).

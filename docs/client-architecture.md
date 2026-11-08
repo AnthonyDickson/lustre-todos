@@ -12,31 +12,12 @@ second page needs it. Tests mirror the source layout.
 
 ## Nested MVU
 
-Two layers: `app.gleam` (shell + routing) delegates to `todo_page/todo_page.gleam`
-(feature page). Child `update` functions return a third element — a list of
-`OutMsg` values signalling app-level concerns to the shell:
-
-```gleam
-pub fn update(
-  model: Model,
-  msg: Msg,
-) -> #(Model, effect.Effect(Msg), List(OutMsg)) {
-```
-
-The parent maps child effects through `effect.map` and folds the out
-messages into its own model and effects with `with_out_msgs`:
-
-```gleam
-TodoPageMsg(inner_msg) -> {
-  let #(inner_model, inner_effect, out_msgs) =
-    todo_page.update_with_storage(model.todo_page, inner_msg)
-  #(
-    Model(..model, todo_page: inner_model),
-    effect.map(inner_effect, TodoPageMsg),
-  )
-  |> with_out_msgs(out_msgs)
-}
-```
+Two layers: `app.gleam` (shell and routing) delegates to the current page, such
+as `todo_page/todo_page.gleam`. A page's `update` returns its model, its
+effects, and a list of `OutMsg` values signalling app-level concerns to the
+shell. The shell wraps the page's messages in its own `Msg`, maps the page's
+effects with `effect.map`, and folds the out messages into its own model and
+effects.
 
 ### App-level concerns: toasts
 
@@ -62,23 +43,26 @@ The cost is wiring: every `OutMsg` variant must be handled in
 `map_out_msg`, and every child `update` returns the extra list. The tradeoff
 pays off for anything that should look and behave identically across the
 app — template consumers signal the shell by adding a variant to
-`out_msg.gleam`, never by rendering their own UI.
+`shared/out_msg.gleam`, never by rendering their own UI.
 
 ## Effect System
 
 `update` returns pure data — a single `effect.run` interprets effects:
 
-| Effect               | Side effect                             |
-| -------------------- | --------------------------------------- |
-| `HttpRequest`        | `gleam_fetch` → typed callback          |
-| `LoadFromStore`      | `window.localStorage.getItem`           |
-| `SaveToStore`        | `window.localStorage.setItem`           |
-| `Redirect`           | `window.location.assign`                |
-| `After(delay, msg)`  | Dispatch `msg` after `delay` ms         |
-| `Navigate`           | Click/popstate interception + pushState |
-| `PushUrl/ReplaceUrl` | `history.pushState` / `replaceState`    |
-| `Batch([...])`       | Run multiple effects                    |
-| `NoEffect`           | No-op                                   |
+| Effect               | Side effect                            |
+| -------------------- | -------------------------------------- |
+| `HttpRequest`        | `gleam_fetch` → typed callback         |
+| `LoadFromStore`      | `window.localStorage.getItem`          |
+| `SaveToStore`        | `window.localStorage.setItem`          |
+| `LogError`           | Write to the console's error stream    |
+| `Redirect`           | `window.location.assign` (a page load) |
+| `SetTitle`           | `document.title`                       |
+| `After(delay, msg)`  | Dispatch `msg` after `delay` ms        |
+| `InitRouting`        | Click/popstate interception, first URL |
+| `PushUrl/ReplaceUrl` | `history.pushState` / `replaceState`   |
+| `Message(msg)`       | Dispatch `msg`                         |
+| `Batch([...])`       | Run multiple effects                   |
+| `NoEffect`           | No-op                                  |
 
 ### Bridging into Lustre
 
@@ -93,7 +77,7 @@ fn update_with_effect(model, msg) -> #(Model, lustre_effect.Effect(Msg)) {
 
 ### HTTP Helpers
 
-Thin per-method constructors in `effect.gleam` delegate to `http_effect.send`:
+Thin per-method constructors in `shared/effect.gleam` delegate to `http_effect.send`:
 
 ```gleam
 effect.get("/api/todos", callback)
@@ -121,7 +105,7 @@ that must not be left in a shared browser.
 
 ## Guard Helpers
 
-`guard.gleam` provides `use`-compatible early-return for `Option` and `Result`.
+`shared/guard.gleam` provides `use`-compatible early-return for `Option` and `Result`.
 `some` and `ok` take the fallback value; `some_lazy` and `ok_lazy` take a
 function, for a fallback that is costly to build or needs the error:
 
@@ -142,6 +126,17 @@ change it sets the title and either updates the page it is already on (keeping
 its state, e.g. the todo filter changing) or starts the new page with its
 `init`. A page message that arrives after its page has gone is dropped. To add a
 page: add its routes, a `Page` case, a `Msg` wrapper, and a `change_page` arm.
+
+## Session Expiry
+
+The shell rewrites every HTTP effect so a `401` response dispatches its own
+`SessionExpired` instead of reaching the page. It then redirects to `/login`
+with the current URL as the return URL, so the user comes back to the same
+page. Pages never handle `401` themselves. `/login` and `/logout` are server
+endpoints, not SPA routes (`shared/auth_route.gleam`): views reach them
+through forms or `effect.Redirect`, since the router would catch a link. The
+`/signed-out` page makes no API request, so it does not send the user straight
+back to the provider.
 
 ## Client Tests
 
