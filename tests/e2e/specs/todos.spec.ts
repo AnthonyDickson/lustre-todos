@@ -5,6 +5,9 @@ test.describe('todos', () => {
   test('shows empty list on first load', async ({ page }) => {
     await page.goto('/');
 
+    // The input is enabled once the list has loaded; before then, no items
+    // show either way.
+    await expect(page.getByTestId('new-todo-input')).toBeEnabled();
     await expect(page.locator('[data-testid="todo-item"]')).toHaveCount(0);
   });
 
