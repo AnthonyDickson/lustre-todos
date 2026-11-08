@@ -1,4 +1,4 @@
-namespace LustreTodos.Coders
+namespace LustreTodos.Shared.Coders
 
 open System
 open Thoth.Json.Net

@@ -67,15 +67,12 @@ server/
       __PROJECT_NAME__.Server.fsproj  # Project file
       packages.lock.json              # Locked dependency graph
       appsettings.Development.json    # Dev environment config
-      ApiError.fs                     # ApiError record type
-      Coders.fs                       # Generic JSON encode/decode
-      Config.fs                       # OIDC/OAuth2 configuration
-      Auth.fs                         # OIDC auth setup (cookie + JWT bearer)
-      OpenApi.fs                      # Schema transformers (record, date, XML doc, hints)
-      Json.fs                         # JSON read/write helpers
-      Db.fs                           # SqlHydra-generated types + QueryContextFactory
-      Constraints.fs                  # Explicit checks mirroring DB constraints (requireAll/requireOne)
-      Todos.fs                        # Store, handlers, routes (vertical slice — example domain)
+      Shared/                         # Cross-cutting modules: errors, auth, config, JSON, OpenAPI, logging
+      Data/                           # Generated Db.fs, constraint checks, mappings shared by slices
+      Feature/                        # Vertical slices, one folder per feature
+        Auth/                         # Login and logout endpoints
+        Status/                       # Public status endpoint
+        Todo/                         # Example slice: one file per operation + TodoEndpoints
       Program.fs                      # Entry point, DbUp, OpenAPI/Scalar config
       migrations/                     # Numbered .sql files applied by DbUp at startup
 client/
@@ -104,7 +101,7 @@ tests/
 
 ## Architecture
 
-### Auth (`Auth.fs`)
+### Auth (`Shared/Auth.fs`, `Feature/Auth/`)
 
 Uses `Microsoft.AspNetCore.Authentication.OpenIdConnect` with two parallel schemes:
 
@@ -117,33 +114,23 @@ Cookie defaults in production: `SecurePolicy=Always`, `SameSite=Lax`, `HttpOnly=
 
 Environment config via `Oidc:Authority`, `Oidc:ClientId`, `Oidc:ClientSecret`, `Oidc:CallbackPath`. The `Login:ReturnUrl` and `OAuth2:*` settings are read in `Program.fs`.
 
-### Vertical Slice Architecture (example: `Todos.fs`)
+### Vertical Slice Architecture (example: `Feature/Todo/`)
 
-The domain logic lives in a single-file vertical slice with nested modules. The template uses a todo domain as an example — replace it with your own domain module:
+Each feature is a folder under `Feature/`, with one file per HTTP operation (e.g. `CreateTodo.fs`). The template uses a todo domain as an example — replace it with your own slices:
 
-- **`Store`** — Database query functions using SqlHydra.Query (creating a `QueryContextFactory` and exposing query operations)
-- **`Api`** — Endpoint handler sub-modules (e.g. `GetAll`, `Get`, `Create`, `Update`, `Delete`), each exposing a `handler` and an `endpoint` function
-- **Top-level module** (`[<RequireQualifiedAccess>]`) — public API: `Store` and `endpoints`
+- **Operation modules** — each holds its request type, private queries, `handler`, and an `endpoint` that adds OpenAPI metadata. The `Path` literal is public so tests can build URLs from it.
+- **`<Feature>Endpoints.all`** — the slice's endpoints grouped by HTTP method. `Program.fs` wraps them in the auth filter; the test host routes the same list without it.
+- **Shared modules** — `Shared/` (cross-cutting infrastructure) and `Data/` (generated `Db.fs` and code several slices need). Slices depend on them, never the reverse, and slices never import each other.
 
-The `Store` holds a `QueryContextFactory` (from `Db.fs`) wired at startup in `Program.fs`. All queries use SqlHydra computation expressions (`selectTask`, `insertTask`, `updateTask`, `deleteTask`). A thin mapping layer copies between DB rows and API types — the types are structurally identical thanks to SqlHydra-compatible type hints in migration SQL.
-
-Handler pattern:
-
-```fsharp
-// No route param: store → EndpointHandler
-let handler (store : Store) : EndpointHandler = ...
-
-// With route param: store → param → EndpointHandler
-let handler (store : Store) (id : Guid) : EndpointHandler = ...
-```
+Dependencies are passed as function arguments: the `QueryContextFactory` (from `Data/Db.fs`) is created once in `Program.fs` and passed to each endpoint. All queries use SqlHydra computation expressions (`selectTask`, `insertTask`, `updateTask`, `deleteTask`).
 
 Each `endpoint` function wraps the handler with OpenAPI metadata via `addOpenApi`. Routes use `/api/<resource>` prefix for collection endpoints and `/api/<resource>/{id}` for item endpoints.
 
 #### OpenAPI schema annotations
 
-Types and fields are annotated for the published document in `OpenApi.fs`. Prefer native `System.ComponentModel.DataAnnotations` attributes, which ASP.NET Core maps onto JSON Schema keywords; fall back to the `SchemaHint` attributes only where they cannot express the constraint (string enums derived from F# unions, minimum-only or `multipleOf` numeric bounds). The `SchemaHintTransformer` and `DecimalSchemaTransformer` are registered in `addOpenApiToBuilder` (`Program.fs`). See [docs/openapi.md](docs/openapi.md) for the full reference and wiring order.
+Types and fields are annotated for the published document in `Shared/OpenApi.fs`. Prefer native `System.ComponentModel.DataAnnotations` attributes, which ASP.NET Core maps onto JSON Schema keywords; fall back to the `SchemaHint` attributes only where they cannot express the constraint (string enums derived from F# unions, minimum-only or `multipleOf` numeric bounds). The `SchemaHintTransformer` and `DecimalSchemaTransformer` are registered in `addOpenApiToBuilder` (`Program.fs`). See [docs/openapi.md](docs/openapi.md) for the full reference and wiring order.
 
-### Database (`Db.fs` + `migrations/`)
+### Database (`Data/Db.fs` + `migrations/`)
 
 - **`Db.fs`** — Auto-generated by `dotnet sqlhydra sqlite`. Contains record types, table declarations, and `QueryContextFactory`. Committed to source control — compiles immediately after clone, no code-gen needed. Do not modify directly, use the just targets.
 - **`migrations/`** — Numbered `.sql` files embedded as resources. DbUp runs them in order at startup, tracking applied scripts in a `SchemaVersions` table. Use SqlHydra-compatible type hints (`GUID`, `BOOLEAN`, `DATETIME`) in column definitions — these aren't real SQLite types but influence codegen. See [SqlHydra's SqliteDataTypes.fs](https://github.com/JordanMarr/SqlHydra/blob/main/src/SqlHydra.Cli/Sqlite/SqliteDataTypes.fs) for the full list.

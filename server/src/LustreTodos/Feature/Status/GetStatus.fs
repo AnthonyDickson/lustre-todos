@@ -1,4 +1,4 @@
-namespace LustreTodos.Status
+namespace LustreTodos.Feature.Status
 
 open System
 open System.Collections.Generic
@@ -12,9 +12,9 @@ open Microsoft.OpenApi
 open Oxpecker
 open Oxpecker.OpenApi
 
-open LustreTodos.Db
-open LustreTodos.Json
-open LustreTodos.RequestLogging
+open LustreTodos.Data.Db
+open LustreTodos.Shared.Json
+open LustreTodos.Shared.RequestLogging
 
 /// <summary>Outcome of the database connectivity probe.</summary>
 type DatabaseHealth = {
@@ -46,7 +46,7 @@ type StatusResponse = {
     Database : DatabaseHealth
 }
 
-module Api =
+module GetStatus =
     [<Literal>]
     let Path = "/api/status"
 
@@ -148,8 +148,10 @@ module Api =
                 do! Json.write ctx response
             }
 
-    let endpoint (queryContext : QueryContextFactory) (environment : string) (startedAt : DateTime) =
-        route Path (handler queryContext environment startedAt)
+    /// <summary>The status endpoint, with its own short-timeout connection so a slow database cannot stall
+    /// the probe.</summary>
+    let endpoint (connectionString : string) (environment : string) (startedAt : DateTime) =
+        route Path (handler (createProbeFactory connectionString) environment startedAt)
         |> addOpenApi (
             OpenApiConfig (
                 responseBodies = [|
@@ -168,16 +170,3 @@ module Api =
                         Task.CompletedTask
             )
         )
-
-    let endpoints
-        (connectionString : string)
-        (environment : string)
-        (startedAt : DateTime)
-        : Oxpecker.RoutingTypes.Endpoint seq =
-        [ GET [ endpoint (createProbeFactory connectionString) environment startedAt ] ]
-
-/// This module defines the public API of the Status feature slice.
-[<RequireQualifiedAccess>]
-module Status =
-    let endpoints (connectionString : string) (environment : string) (startedAt : DateTime) =
-        Api.endpoints connectionString environment startedAt

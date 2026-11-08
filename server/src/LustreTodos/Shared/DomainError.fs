@@ -1,4 +1,4 @@
-namespace LustreTodos.DomainError
+namespace LustreTodos.Shared.DomainError
 
 type DomainError =
     /// The client provided input that violates domain rules.

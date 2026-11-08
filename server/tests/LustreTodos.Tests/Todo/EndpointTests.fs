@@ -1,13 +1,15 @@
-namespace LustreTodos.Tests
+namespace LustreTodos.Tests.Todo
 
 open System
 open System.Net
 open System.Net.Http
 open System.Text
 open Expecto
-open LustreTodos.ApiError
-open LustreTodos.Coders
-open LustreTodos.Todos
+open LustreTodos.Shared.ApiError
+open LustreTodos.Shared.Coders
+open LustreTodos.Feature.Todo
+open LustreTodos.Feature.Todo.UpdateTodo
+open LustreTodos.Tests
 
 module TodosTests =
     let private todo (id : Guid) (title : string) (completed : bool) = {

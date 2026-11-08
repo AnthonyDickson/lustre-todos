@@ -1,4 +1,4 @@
-namespace LustreTodos.OpenApi
+namespace LustreTodos.Shared.OpenApi
 
 open System
 

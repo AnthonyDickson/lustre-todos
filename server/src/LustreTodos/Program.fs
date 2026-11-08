@@ -28,14 +28,15 @@ open Serilog
 open Serilog.Events
 open Serilog.Formatting.Compact
 
-open LustreTodos.ApiError
-open LustreTodos.Auth
-open LustreTodos.Config
-open LustreTodos.Db
-open LustreTodos.Json
-open LustreTodos.OpenApi
-open LustreTodos.Status
-open LustreTodos.Todos
+open LustreTodos.Data.Db
+open LustreTodos.Feature.Auth
+open LustreTodos.Feature.Status
+open LustreTodos.Feature.Todo
+open LustreTodos.Shared.ApiError
+open LustreTodos.Shared.Auth
+open LustreTodos.Shared.Config
+open LustreTodos.Shared.Json
+open LustreTodos.Shared.OpenApi
 
 
 let private addOpenApiToBuilder (builder : WebApplicationBuilder) (ouath2 : OAuth2Config) =
@@ -190,7 +191,7 @@ let private configureSerilog
                 | _ -> 0
             | _ -> 0
 
-        let isStatusProbe = requestPath.StartsWith Status.Api.Path
+        let isStatusProbe = requestPath.StartsWith GetStatus.Path
 
         let isFrameworkLog =
             source.StartsWith "Microsoft.AspNetCore"
@@ -237,17 +238,29 @@ let private configureForwardedHeaders (options : ForwardedHeadersOptions) : unit
     options.KnownIPNetworks.Add (System.Net.IPNetwork.Parse "172.16.0.0/12")
     options.KnownIPNetworks.Add (System.Net.IPNetwork.Parse "192.168.0.0/16")
 
+let private withAuth endpoints =
+    Seq.map (addFilter Auth.requireAuth) endpoints
+
 let private buildEndpoints (connectionString : string) (loginReturnUrl : string) (app : WebApplication) =
     let queryContext = QueryContextFactory.Create connectionString
     let startedAt = Process.GetCurrentProcess().StartTime.ToUniversalTime ()
 
-    let authEndpoints = Auth.endpoints loginReturnUrl
-    let todoEndpoints = Todos.endpoints queryContext
+    let authEndpoints = [
+        GET [ Login.endpoint loginReturnUrl ]
+        // POST, so another site cannot log the user out with a link: the SameSite=Lax cookie is not
+        // sent with its cross-site form posts.
+        POST [ Logout.endpoint ]
+    ]
 
-    let statusEndpoints =
-        Status.endpoints connectionString app.Environment.EnvironmentName startedAt
+    let statusEndpoints = [
+        GET [
+            GetStatus.endpoint connectionString app.Environment.EnvironmentName startedAt
+        ]
+    ]
 
-    Seq.concat [ authEndpoints; todoEndpoints; statusEndpoints ]
+    let featureEndpoints = TodoEndpoints.all queryContext |> withAuth
+
+    Seq.concat [ Seq.ofList authEndpoints; Seq.ofList statusEndpoints; featureEndpoints ]
 
 let private configureBuilder (builder : WebApplicationBuilder) (config : AppConfig) : unit =
     let isDevelopment = builder.Environment.IsDevelopment ()
@@ -299,7 +312,7 @@ let private configureApp (app : WebApplication) (config : AppConfig) : unit =
     app.UseAuthentication () |> ignore
 
     app.Use (
-        RequestLogging.Middleware.requestLogging (
+        Shared.RequestLogging.Middleware.requestLogging (
             (app.Services.GetRequiredService<Serilog.ILogger> ()).ForContext ("SourceContext", "LustreTodos.Request")
         )
     )

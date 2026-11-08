@@ -21,13 +21,13 @@ module private TestClaims =
         ClaimsPrincipal identity
 
 type TestAppConfig = {
-    EndpointProviders : (string -> Oxpecker.RoutingTypes.Endpoint seq) list
+    EndpointProviders : (LustreTodos.Data.Db.QueryContextFactory -> Oxpecker.RoutingTypes.Endpoint list) list
     CleanTables : string list
 }
 
+/// Each `with*` routes a slice's production endpoint list, minus the auth filter.
 module TestAppConfig =
-    open LustreTodos
-    open LustreTodos.Db
+    open LustreTodos.Feature.Todo
 
     let empty = {
         EndpointProviders = []
@@ -36,9 +36,7 @@ module TestAppConfig =
 
     let withTodos (config : TestAppConfig) = {
         config with
-            EndpointProviders =
-                (fun connStr -> QueryContextFactory.Create connStr |> Todos.Api.endpoints)
-                :: config.EndpointProviders
+            EndpointProviders = TodoEndpoints.all :: config.EndpointProviders
             CleanTables = "Todos" :: config.CleanTables
     }
 
@@ -52,8 +50,9 @@ type TestApp = {
         member this.Dispose () = this.Dispose ()
 
 module TestApp =
-    open LustreTodos.RequestLogging
-    open LustreTodos.Todos
+    open LustreTodos.Shared.RequestLogging
+    open LustreTodos.Data.Db
+    open LustreTodos.Feature.Todo
 
     /// Create an app server with an in-memory SQLite database
     let create (config : TestAppConfig) =
@@ -64,14 +63,15 @@ module TestApp =
         let name = $"test-todos-{Guid.NewGuid ()}"
 
         let connectionString =
-            LustreTodos.Config.Config.withForeignKeys $"Data Source=file:{name}?mode=memory&cache=shared"
+            LustreTodos.Shared.Config.Config.withForeignKeys $"Data Source=file:{name}?mode=memory&cache=shared"
 
         let keeper = new SqliteConnection (connectionString)
         keeper.Open ()
 
+        let queryContext = QueryContextFactory.Create connectionString
+
         let endpoints =
-            config.EndpointProviders
-            |> Seq.collect (fun provider -> provider connectionString)
+            config.EndpointProviders |> Seq.collect (fun provider -> provider queryContext)
 
         let result =
             DbUp.DeployChanges.To

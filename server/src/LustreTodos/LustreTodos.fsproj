@@ -14,19 +14,33 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="ApiError.fs" />
-    <Compile Include="DomainError.fs" />
-    <Compile Include="RequestLogging.fs" />
-    <Compile Include="Coders.fs" />
-    <Compile Include="Config.fs" />
-    <Compile Include="Auth.fs" />
-    <Compile Include="OpenApi.fs" />
-    <Compile Include="Json.fs" />
-    <Compile Include="Db.fs" />
-    <Compile Include="Constraints.fs" />
-    <Compile Include="Endpoint.fs" />
-    <Compile Include="Todos.fs" />
-    <Compile Include="Status.fs" />
+    <Compile Include="Shared/ApiError.fs" />
+    <Compile Include="Shared/DomainError.fs" />
+    <Compile Include="Shared/RequestLogging.fs" />
+    <Compile Include="Shared/Coders.fs" />
+    <Compile Include="Shared/Config.fs" />
+    <Compile Include="Shared/Auth.fs" />
+    <Compile Include="Shared/OpenApi.fs" />
+    <Compile Include="Shared/Json.fs" />
+    <Compile Include="Shared/Endpoint.fs" />
+
+    <Compile Include="Data/Db.fs" />
+    <Compile Include="Data/Constraints.fs" />
+
+    <Compile Include="Feature/Auth/Login.fs" />
+    <Compile Include="Feature/Auth/Logout.fs" />
+
+    <Compile Include="Feature/Status/GetStatus.fs" />
+
+    <Compile Include="Feature/Todo/Todo.fs" />
+    <Compile Include="Feature/Todo/ReadAllTodos.fs" />
+    <Compile Include="Feature/Todo/ReadTodo.fs" />
+    <Compile Include="Feature/Todo/CreateTodo.fs" />
+    <Compile Include="Feature/Todo/UpdateTodo.fs" />
+    <Compile Include="Feature/Todo/DeleteTodo.fs" />
+    <Compile Include="Feature/Todo/DeleteCompletedTodos.fs" />
+    <Compile Include="Feature/Todo/TodoEndpoints.fs" />
+
     <Compile Include="Program.fs" />
   </ItemGroup>
 

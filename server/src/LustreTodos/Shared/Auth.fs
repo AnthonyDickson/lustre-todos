@@ -1,4 +1,4 @@
-namespace LustreTodos.Auth
+namespace LustreTodos.Shared.Auth
 
 open System
 
@@ -11,18 +11,24 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.OpenApi
 open Oxpecker
 
-open LustreTodos.Config
-open LustreTodos.ApiError
-open LustreTodos.Coders
-open LustreTodos.DomainError
+open LustreTodos.Shared.Config
+open LustreTodos.Shared.ApiError
+open LustreTodos.Shared.Coders
+open LustreTodos.Shared.DomainError
 
 [<RequireQualifiedAccess>]
 module Auth =
+    [<Literal>]
+    let LoginPath = "/login"
+
+    [<Literal>]
+    let LogoutPath = "/logout"
+
     let private policyName = "authenticated"
 
     let private polAuthScheme = "polAuth"
-    let private cookieScheme = CookieAuthenticationDefaults.AuthenticationScheme
-    let private oidcScheme = OpenIdConnectDefaults.AuthenticationScheme
+    let cookieScheme = CookieAuthenticationDefaults.AuthenticationScheme
+    let oidcScheme = OpenIdConnectDefaults.AuthenticationScheme
     let private bearerScheme = "bearer"
 
     let oauthRequirement (doc : OpenApiDocument) : OpenApiSecurityRequirement =
@@ -91,7 +97,7 @@ module Auth =
                     options.Cookie.SameSite <- SameSiteMode.Lax
                     options.Cookie.HttpOnly <- true
                     options.Cookie.IsEssential <- true
-                    options.LoginPath <- "/login"
+                    options.LoginPath <- LoginPath
                     options.ExpireTimeSpan <- TimeSpan.FromHours 1
                     options.SlidingExpiration <- true
             )
@@ -151,33 +157,6 @@ module Auth =
                 )
                 |> ignore)
         |> ignore
-
-    let private loginHandler (returnUrl : string) : EndpointHandler =
-        fun ctx ->
-            task {
-                if ctx.User.Identity.IsAuthenticated then
-                    ctx.Response.Redirect "/"
-                else
-                    let props = AuthenticationProperties (RedirectUri = returnUrl)
-                    return! ctx.ChallengeAsync (oidcScheme, props)
-            }
-
-    let private logoutHandler : EndpointHandler =
-        fun ctx ->
-            task {
-                // Currently Authelia does not support RP-Initiated Logout
-                // (see https://github.com/authelia/authelia/pull/11660). Once released,
-                // replace with: ctx.SignOutAsync cookieScheme then
-                // ctx.SignOutAsync (oidcScheme, AuthenticationProperties (RedirectUri = returnUrl))
-                return! ctx.SignOutAsync (cookieScheme, AuthenticationProperties (RedirectUri = "/"))
-            }
-
-    let endpoints (loginReturnUrl : string) : Oxpecker.RoutingTypes.Endpoint seq = [
-        GET [ route "/login" (loginHandler loginReturnUrl) ]
-        // POST, so another site cannot log the user out with a link: the SameSite=Lax cookie is not
-        // sent with its cross-site form posts.
-        POST [ route "/logout" logoutHandler ]
-    ]
 
     let getUserId (ctx : HttpContext) : Result<string, DomainError> =
         let userId = ctx.User.FindFirst "sub" |> Option.ofObj |> Option.map _.Value

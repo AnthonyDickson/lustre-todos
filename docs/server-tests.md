@@ -12,13 +12,13 @@ The host contains only what endpoints need:
 
 - SQLite (temp file, auto-cleaned)
 - Routing + Oxpecker middleware
-- `Api.endpoints` directly — **not** the full domain module endpoints
+- The slice's production endpoint list (e.g. `TodoEndpoints.all`), without the auth filter
 
-### Why `Api.endpoints` not the domain module endpoints
+### Why no auth filter
 
-The domain module's top-level `endpoints` wraps every endpoint with `requireAuth`,
-which needs the full OIDC/JWT setup. Tests call `Api.endpoints` directly, bypassing
-auth entirely. Production calls the domain module's `endpoints` and gets the auth filter.
+`Program.fs` wraps every feature endpoint with `requireAuth`, which needs the full
+OIDC/JWT setup. The test host routes the same endpoint list without the filter and
+injects a fake user with a `sub` claim instead.
 
 ### Fixture lifecycle
 

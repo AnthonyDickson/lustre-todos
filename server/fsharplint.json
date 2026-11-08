@@ -1,6 +1,6 @@
 {
   "ignoreFiles": [
-    "src/LustreTodos/Db.fs",
+    "src/LustreTodos/Data/Db.fs",
     "src/*/obj/*/*/*/*",
     "tests/*/obj/*/*/*",
     "Microsoft.NET.Test.Sdk.Program.fs"

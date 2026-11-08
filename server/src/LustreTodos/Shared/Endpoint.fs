@@ -1,13 +1,13 @@
-namespace LustreTodos.Endpoint
+namespace LustreTodos.Shared.Endpoint
 
 open System.Threading.Tasks
 open Microsoft.AspNetCore.Http
 open Microsoft.Data.Sqlite
 
-open LustreTodos.ApiError
-open LustreTodos.DomainError
-open LustreTodos.RequestLogging
-open LustreTodos.Json
+open LustreTodos.Shared.ApiError
+open LustreTodos.Shared.DomainError
+open LustreTodos.Shared.RequestLogging
+open LustreTodos.Shared.Json
 
 /// <summary>Maps <c>Task&lt;Result&lt;unit, DomainError&gt;&gt;</c> results into HTTP responses
 /// suitable for Oxpecker endpoint handlers.</summary>

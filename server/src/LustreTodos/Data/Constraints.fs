@@ -1,4 +1,4 @@
-namespace LustreTodos.Constraints
+namespace LustreTodos.Data
 
 /// <summary>A failed constraint check. Constraint checks mirror the database's integrity constraints but
 /// produce a friendly, actionable error message. This type is deliberately narrower than
@@ -17,7 +17,7 @@ module Constraints =
 
     open FsToolkit.ErrorHandling
 
-    open LustreTodos.DomainError
+    open LustreTodos.Shared.DomainError
 
     /// <summary>Combine a list of failed checks into a single error, joining their messages. The input
     /// is guaranteed to be non-empty: it comes from a failed <c>List.sequenceTaskResultA</c>, which
