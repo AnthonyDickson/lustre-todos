@@ -24,7 +24,7 @@ module UpdateTodo =
     type UpdateTodoRequest = {
         /// <summary>The new title for the todo.</summary>
         [<MinLength(1)>]
-        [<MaxLength(TodoLimits.MaxTitleLength)>]
+        [<MaxLength(TodoTitle.MaxLength)>]
         Title : string
 
         /// <summary>Whether the todo is now completed.</summary>
@@ -38,10 +38,11 @@ module UpdateTodo =
         (queryContext : QueryContextFactory)
         (userId : string)
         (id : Guid)
-        (title : string)
+        (title : TodoTitle)
         (completed : bool)
         =
         task {
+            let title = TodoTitle.value title
             use! shared = queryContext.OpenContextAsync ()
             shared.BeginTransaction ()
 
@@ -62,7 +63,7 @@ module UpdateTodo =
 
             shared.CommitTransaction ()
 
-            return result |> Option.map Todo.fromRow
+            return result |> Option.map TodoCodec.fromRow
         }
 
     let private handler (queryContext : QueryContextFactory) (id : Guid) : EndpointHandler =
@@ -72,13 +73,13 @@ module UpdateTodo =
                 let! (req : UpdateTodoRequest) = Json.read ctx
                 let! userId = Auth.getUserId ctx
 
-                let! title = Validation.validateAndTrimTitle req.Title
+                let! title = TodoTitle.create req.Title
                 let! updated = update queryContext userId id title req.Completed
 
                 match updated with
                 | Some updated ->
                     log.Info ($"Updated todo %O{id}", LogProp.prop "todoId" (id.ToString ()))
-                    do! Json.write ctx updated
+                    do! Json.write ctx (TodoResponse.fromDomain updated)
                 | None ->
                     log.Warn ($"Todo %O{id} not found", LogProp.prop "todoId" (id.ToString ()))
                     return! Error (NotFound $"Todo %O{id} not found")
@@ -96,7 +97,7 @@ module UpdateTodo =
             OpenApiConfig (
                 requestBody = RequestBody typeof<UpdateTodoRequest>,
                 responseBodies = [|
-                    ResponseBody typeof<Todo>
+                    ResponseBody typeof<TodoResponse>
                     ResponseBody (typeof<ApiError>, statusCode = 400)
                     ResponseBody (typeof<ApiError>, statusCode = 401)
                     ResponseBody (typeof<ApiError>, statusCode = 404)

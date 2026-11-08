@@ -33,6 +33,8 @@
     <Compile Include="Feature/Status/GetStatus.fs" />
 
     <Compile Include="Feature/Todo/Todo.fs" />
+    <Compile Include="Feature/Todo/TodoCodec.fs" />
+    <Compile Include="Feature/Todo/TodoResponse.fs" />
     <Compile Include="Feature/Todo/ReadAllTodos.fs" />
     <Compile Include="Feature/Todo/ReadTodo.fs" />
     <Compile Include="Feature/Todo/CreateTodo.fs" />

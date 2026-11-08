@@ -1,50 +1,17 @@
 namespace LustreTodos.Feature.Todo
 
 open System
-open System.ComponentModel.DataAnnotations
 
-/// <summary>Limits shared by the Todo validation rules and their OpenAPI schema annotations.</summary>
-module TodoLimits =
+open LustreTodos.Shared.DomainError
+
+/// <summary>A todo's title: trimmed, non-empty, and at most <c>MaxLength</c> characters. The case is
+/// private, so <c>create</c> is the only way to make one.</summary>
+type TodoTitle = private TodoTitle of string
+
+module TodoTitle =
+    /// <summary>Shared by the validation below and the request types' OpenAPI annotations.</summary>
     [<Literal>]
-    let internal MaxTitleLength = 256
-
-/// <summary>A todo item stored in the database.</summary>
-type Todo = {
-    /// <summary>Unique identifier for the todo item.</summary>
-    Id : Guid
-
-    /// <summary>The title or description of the todo.</summary>
-    [<MinLength(1)>]
-    [<MaxLength(TodoLimits.MaxTitleLength)>]
-    Title : string
-
-    /// <summary>Whether the todo has been completed.</summary>
-    Completed : bool
-
-    /// <summary>UTC timestamp when the todo was created.</summary>
-    CreatedAt : DateTime
-}
-
-module Todo =
-    open LustreTodos.Data.Db
-
-    let fromRow (row : main.Todos) : Todo = {
-        Id = row.Id
-        Title = row.Title
-        Completed = row.Completed
-        CreatedAt = DateTimeOffset.FromUnixTimeSeconds(row.CreatedAt).UtcDateTime
-    }
-
-    let toRow (todo : Todo) (userId : string) : main.Todos = {
-        Id = todo.Id
-        UserId = userId
-        Title = todo.Title
-        Completed = todo.Completed
-        CreatedAt = DateTimeOffset(todo.CreatedAt).ToUnixTimeSeconds ()
-    }
-
-module Validation =
-    open LustreTodos.Shared.DomainError
+    let MaxLength = 256
 
     let private nonEmpty (title : string) =
         if String.IsNullOrWhiteSpace title then
@@ -53,19 +20,31 @@ module Validation =
             Ok title
 
     let private acceptableLength (title : string) =
-        if title.Length > TodoLimits.MaxTitleLength then
+        if title.Length > MaxLength then
             Error (
                 ValidationFailed
                     $"Title is too long. Titles must be at most \
-                    %i{TodoLimits.MaxTitleLength} characters, but got %i{title.Length}"
+                    %i{MaxLength} characters, but got %i{title.Length}"
             )
         else
             Ok title
 
-    /// <summary>Trim whitespace and then validate a Todo title. Returns the trimmed title.</summary>
-    let validateAndTrimTitle (title : string) =
-        title.Trim () |> nonEmpty |> Result.bind acceptableLength
+    /// <summary>Trim whitespace, then validate.</summary>
+    let create (title : string) =
+        title.Trim ()
+        |> nonEmpty
+        |> Result.bind acceptableLength
+        |> Result.map TodoTitle
 
-    let validate (todo : Todo) =
-        validateAndTrimTitle todo.Title
-        |> Result.map (fun trimmedTitle -> { todo with Title = trimmedTitle })
+    let value (TodoTitle title) = title
+
+    /// <summary>Skips validation, for values read back from the database, which were validated on
+    /// write.</summary>
+    let internal unsafeFromString title = TodoTitle title
+
+type Todo = {
+    Id : Guid
+    Title : TodoTitle
+    Completed : bool
+    CreatedAt : DateTime
+}

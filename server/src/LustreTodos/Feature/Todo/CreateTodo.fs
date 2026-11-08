@@ -3,6 +3,7 @@ namespace LustreTodos.Feature.Todo
 module CreateTodo =
     open System
     open System.Collections.Generic
+    open System.ComponentModel.DataAnnotations
     open System.Threading.Tasks
 
     open FsToolkit.ErrorHandling
@@ -18,6 +19,24 @@ module CreateTodo =
     open LustreTodos.Shared.Endpoint
     open LustreTodos.Shared.Json
     open LustreTodos.Shared.RequestLogging
+
+    /// <summary>Payload for creating a todo. The client chooses the ID and creation time, so it can show
+    /// the todo before the server responds.</summary>
+    type CreateTodoRequest = {
+        /// <summary>Unique identifier for the todo item, preferably a v7 UUID.</summary>
+        Id : Guid
+
+        /// <summary>The title or description of the todo.</summary>
+        [<MinLength(1)>]
+        [<MaxLength(TodoTitle.MaxLength)>]
+        Title : string
+
+        /// <summary>Whether the todo has been completed.</summary>
+        Completed : bool
+
+        /// <summary>When the todo was created.</summary>
+        CreatedAt : DateTime
+    }
 
     [<Literal>]
     let Path = "/api/todos"
@@ -46,7 +65,7 @@ module CreateTodo =
             let! _ =
                 insertTask queryContext {
                     for t in main.Todos do
-                        entity (Todo.toRow todo userId)
+                        entity (TodoCodec.toRow userId todo)
                 }
 
             return ()
@@ -57,14 +76,22 @@ module CreateTodo =
             taskResult {
                 let log = RequestLog.fromContext ctx
                 let! userId = Auth.getUserId ctx
-                let! (todo : Todo) = Json.read ctx
-                let! todo = Validation.validate todo
+                let! (req : CreateTodoRequest) = Json.read ctx
+                let! title = TodoTitle.create req.Title
+
+                let todo : Todo = {
+                    Id = req.Id
+                    Title = title
+                    Completed = req.Completed
+                    CreatedAt = req.CreatedAt
+                }
+
                 do! Constraints.requireOne (requireIdIsAvailable queryContext todo.Id)
 
                 let! () = insert queryContext userId todo
                 log.Info ($"Created todo %O{todo.Id}", LogProp.prop "todoId" (todo.Id.ToString ()))
                 ctx.SetStatusCode 201
-                do! Json.write ctx todo
+                do! Json.write ctx (TodoResponse.fromDomain todo)
             })
 
     let private configureOperation (op : OpenApiOperation) _ _ =
@@ -77,9 +104,9 @@ module CreateTodo =
         route Path (handler queryContext)
         |> addOpenApi (
             OpenApiConfig (
-                requestBody = RequestBody typeof<Todo>,
+                requestBody = RequestBody typeof<CreateTodoRequest>,
                 responseBodies = [|
-                    ResponseBody (typeof<Todo>, statusCode = 201)
+                    ResponseBody (typeof<TodoResponse>, statusCode = 201)
                     ResponseBody (typeof<ApiError>, statusCode = 400)
                     ResponseBody (typeof<ApiError>, statusCode = 401)
                     ResponseBody (typeof<ApiError>, statusCode = 409)

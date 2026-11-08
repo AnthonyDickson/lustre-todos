@@ -29,7 +29,7 @@ module ReadAllTodos =
                         where (t.UserId = userId)
                 }
 
-            return rows |> List.ofSeq |> List.map Todo.fromRow
+            return rows |> List.ofSeq |> List.map TodoCodec.fromRow
         }
 
     let private handler (queryContext : QueryContextFactory) : EndpointHandler =
@@ -40,7 +40,7 @@ module ReadAllTodos =
                 let log = RequestLog.fromContext ctx
 
                 log.Info ($"Returned %i{List.length items} todos", LogProp.prop "count" (List.length items))
-                do! Json.write ctx items
+                do! Json.write ctx (List.map TodoResponse.fromDomain items)
             })
 
     let private configureOperation (op : OpenApiOperation) _ _ =
@@ -54,7 +54,7 @@ module ReadAllTodos =
         |> addOpenApi (
             OpenApiConfig (
                 responseBodies = [|
-                    ResponseBody typeof<Todo list>
+                    ResponseBody typeof<TodoResponse list>
                     ResponseBody (typeof<ApiError>, statusCode = 401)
                 |],
                 configureOperation = configureOperation

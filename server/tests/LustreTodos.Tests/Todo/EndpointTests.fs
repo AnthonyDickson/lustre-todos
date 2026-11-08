@@ -12,7 +12,7 @@ open LustreTodos.Feature.Todo.UpdateTodo
 open LustreTodos.Tests
 
 module TodosTests =
-    let private todo (id : Guid) (title : string) (completed : bool) = {
+    let private todo (id : Guid) (title : string) (completed : bool) : CreateTodo.CreateTodoRequest = {
         Id = id
         Title = title
         Completed = completed
@@ -44,7 +44,7 @@ module TodosTests =
                 Expect.equal response.StatusCode HttpStatusCode.OK "status code should be 200"
 
                 let! body = response.Content.ReadAsStringAsync () |> Async.AwaitTask
-                let result = Decode.fromString<Todo list> body
+                let result = Decode.fromString<TodoResponse list> body
 
                 Expect.equal result (Ok []) "body should be empty list"
             }
@@ -62,7 +62,7 @@ module TodosTests =
 
                 let! body = response.Content.ReadAsStringAsync () |> Async.AwaitTask
 
-                match Decode.fromString<Todo list> body with
+                match Decode.fromString<TodoResponse list> body with
                 | Ok [ item ] ->
                     Expect.equal expected.Id item.Id "id should match"
                     Expect.equal expected.Title item.Title "title should match"
@@ -83,7 +83,7 @@ module TodosTests =
 
                 let! body = response.Content.ReadAsStringAsync () |> Async.AwaitTask
 
-                match Decode.fromString<Todo> body with
+                match Decode.fromString<TodoResponse> body with
                 | Ok item ->
                     Expect.equal expected.Id item.Id "id should match"
                     Expect.equal expected.Title item.Title "title should match"
@@ -112,12 +112,33 @@ module TodosTests =
 
                 let! body = response.Content.ReadAsStringAsync () |> Async.AwaitTask
 
-                match Decode.fromString<Todo> body with
+                match Decode.fromString<TodoResponse> body with
                 | Ok created ->
                     Expect.equal input.Id created.Id "id should match"
                     Expect.equal input.Title created.Title "title should match"
                     Expect.equal input.Completed created.Completed "completed should match"
                 | Error err -> failtest err
+            }
+
+            testCaseAsync "POST /api/todos trims the title and rejects a blank one"
+            <| async {
+                use app = newApp ()
+
+                let! padded =
+                    postJson app.Client "/api/todos" (todo (Guid.NewGuid ()) "  Padded  " false)
+                    |> Async.AwaitTask
+
+                let! body = padded.Content.ReadAsStringAsync () |> Async.AwaitTask
+
+                match Decode.fromString<TodoResponse> body with
+                | Ok created -> Expect.equal created.Title "Padded" "the title should be trimmed"
+                | Error err -> failtest err
+
+                let! blank =
+                    postJson app.Client "/api/todos" (todo (Guid.NewGuid ()) "   " false)
+                    |> Async.AwaitTask
+
+                Expect.equal blank.StatusCode HttpStatusCode.BadRequest "a blank title should be rejected"
             }
 
             testCaseAsync "POST /api/todos with an existing ID is rejected and keeps the original"
@@ -145,7 +166,7 @@ module TodosTests =
 
                 let! stored = app.Client.GetStringAsync $"/api/todos/{original.Id}" |> Async.AwaitTask
 
-                match Decode.fromString<Todo> stored with
+                match Decode.fromString<TodoResponse> stored with
                 | Ok stored -> Expect.equal stored.Title original.Title "the original should be kept"
                 | Error err -> failtest err
             }
@@ -168,7 +189,7 @@ module TodosTests =
 
                 let! body = response.Content.ReadAsStringAsync () |> Async.AwaitTask
 
-                match Decode.fromString<Todo> body with
+                match Decode.fromString<TodoResponse> body with
                 | Ok updated ->
                     Expect.equal original.Id updated.Id "id should match"
                     Expect.equal update.Title updated.Title "title should match"
@@ -208,7 +229,7 @@ module TodosTests =
                 let! response = app.Client.GetAsync "/api/todos" |> Async.AwaitTask
                 let! body = response.Content.ReadAsStringAsync () |> Async.AwaitTask
 
-                match Decode.fromString<Todo list> body with
+                match Decode.fromString<TodoResponse list> body with
                 | Ok items ->
                     Expect.equal (List.length items) 1 "should have 1 remaining todo"
                     Expect.equal active.Id items[0].Id "remaining todo id should match"

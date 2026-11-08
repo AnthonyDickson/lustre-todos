@@ -31,7 +31,7 @@ module ReadTodo =
                         tryHead
                 }
 
-            return result |> Option.map Todo.fromRow
+            return result |> Option.map TodoCodec.fromRow
         }
 
     let private handler (queryContext : QueryContextFactory) (id : Guid) : EndpointHandler =
@@ -44,7 +44,7 @@ module ReadTodo =
                 match todo with
                 | Some item ->
                     log.Info ($"Returned todo %O{id}", LogProp.prop "todoId" (id.ToString ()))
-                    do! Json.write ctx item
+                    do! Json.write ctx (TodoResponse.fromDomain item)
                 | None ->
                     log.Warn ($"Todo %O{id} not found", LogProp.prop "todoId" (id.ToString ()))
                     return! Error (NotFound $"Todo %O{id} not found")
@@ -61,7 +61,7 @@ module ReadTodo =
         |> addOpenApi (
             OpenApiConfig (
                 responseBodies = [|
-                    ResponseBody typeof<Todo>
+                    ResponseBody typeof<TodoResponse>
                     ResponseBody (typeof<ApiError>, statusCode = 401)
                     ResponseBody (typeof<ApiError>, statusCode = 404)
                 |],
