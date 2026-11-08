@@ -62,7 +62,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Run the image as docker-compose.prod.example.yml does (named
+      # Run the image as docker/docker-compose.prod.example.yml does (named
       # volume over /data, production environment) and wait for a healthy
       # status report carrying the requested version. The OIDC authority is
       # only contacted on login, so a placeholder suffices.
