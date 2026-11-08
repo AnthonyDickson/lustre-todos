@@ -71,7 +71,18 @@ module Auth =
                         )
             }
 
-    let requireAuth : EndpointMiddleware = requirePolicy policyName
+    let private requireAuth : EndpointMiddleware = requirePolicy policyName
+
+    /// <summary>Endpoint metadata marking an endpoint that requires
+    /// authentication, so the OpenAPI document can declare its security
+    /// requirement.</summary>
+    type RequiresAuthentication = RequiresAuthentication
+
+    /// <summary>Requires an authenticated user, by session cookie or bearer
+    /// token, and records the requirement in the endpoint's
+    /// metadata.</summary>
+    let authenticated (endpoint : Endpoint) : Endpoint =
+        endpoint |> addFilter requireAuth |> addMetadata RequiresAuthentication
 
     let configureServices
         (services : IServiceCollection)

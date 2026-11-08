@@ -106,12 +106,13 @@ module OpenApi =
                 let jsonType = context.JsonTypeInfo.Type
 
                 if FSharpType.IsRecord jsonType then
+                    // The serialised names, which the naming policy may
+                    // change, not the record field names.
                     let required =
-                        jsonType
-                        |> FSharpType.GetRecordFields
-                        |> Seq.filter (fun field ->
-                            not (isOptionType field.PropertyType))
-                        |> Seq.map (fun field -> field.Name)
+                        context.JsonTypeInfo.Properties
+                        |> Seq.filter (fun property ->
+                            not (isOptionType property.PropertyType))
+                        |> Seq.map _.Name
                         |> HashSet<string>
 
                     if required.Count > 0 then

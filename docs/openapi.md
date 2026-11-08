@@ -92,13 +92,20 @@ hints in step when a rule changes.
 
 - `FSharpOptionSchemaTransformer` (from `Oxpecker.OpenApi`) - renders
   `option`/`voption` as nullable.
-- `FSharpRecordSchemaTransformer` - marks non-`option` record fields required
-  and fixes string type inference.
+- `FSharpRecordSchemaTransformer` - marks non-`option` record fields required,
+  by their serialised names, and fixes string type inference.
 - `XmlDocSchemaTransformer` - populates descriptions from F# XML doc comments.
 - `SchemaHintTransformer` - applies the `SchemaHint` attributes.
 - `DecimalSchemaTransformer` - documents `decimal` as a plain `number`. Without
   it, `System.Text.Json` infers a `number`-or-`string` union with `format:
   double` and a numeric-string pattern.
+
+### Security
+
+Each operation declares its own security requirement. Endpoints behind the
+authentication filter carry endpoint metadata saying so, and an operation
+transformer adds the OAuth requirement to those operations only. The status
+endpoint, which needs no login, is documented as open.
 
 ### Decimal wire format
 

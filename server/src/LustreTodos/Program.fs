@@ -39,7 +39,7 @@ open LustreTodos.Shared.Logging
 open LustreTodos.Shared.OpenApi
 
 
-let private addOpenApiToBuilder
+let addOpenApiToBuilder
     (builder : WebApplicationBuilder)
     (ouath2 : OAuth2Config)
     =
@@ -93,13 +93,26 @@ let private addOpenApiToBuilder
                         )
                 )
 
-            doc.Security <- ResizeArray [ Auth.oauthRequirement doc ]
+            Task.CompletedTask)
+        |> ignore
+
+        // Per operation, so endpoints outside Auth.authenticated (status) are
+        // documented as open.
+        options.AddOperationTransformer (fun operation context _ ->
+            let requiresAuthentication =
+                context.Description.ActionDescriptor.EndpointMetadata
+                |> Seq.exists (fun metadata ->
+                    metadata :? Auth.RequiresAuthentication)
+
+            if requiresAuthentication then
+                operation.Security <-
+                    ResizeArray [ Auth.oauthRequirement context.Document ]
 
             Task.CompletedTask)
         |> ignore)
     |> ignore
 
-let private addOpenApiToApp (app : WebApplication) (clientId : string) =
+let addOpenApiToApp (app : WebApplication) (clientId : string) =
     app.MapOpenApi () |> ignore
 
     app.MapScalarApiReference (fun opts ->
@@ -196,8 +209,7 @@ let private configureForwardedHeaders
     options.KnownIPNetworks.Add (System.Net.IPNetwork.Parse "172.16.0.0/12")
     options.KnownIPNetworks.Add (System.Net.IPNetwork.Parse "192.168.0.0/16")
 
-let private withAuth endpoints =
-    Seq.map (addFilter Auth.requireAuth) endpoints
+let private withAuth endpoints = Seq.map Auth.authenticated endpoints
 
 let private buildEndpoints
     (connectionString : string)
