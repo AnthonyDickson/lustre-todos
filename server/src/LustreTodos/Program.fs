@@ -31,6 +31,7 @@ open Serilog.Formatting.Compact
 open LustreTodos.Data.Db
 open LustreTodos.Feature.Auth
 open LustreTodos.Feature.Status
+open LustreTodos.Feature.TestSupport
 open LustreTodos.Feature.Todo
 open LustreTodos.Shared.ApiError
 open LustreTodos.Shared.Auth
@@ -263,7 +264,20 @@ let private buildEndpoints
 
     let featureEndpoints = TodoEndpoints.all queryContext |> withAuth
 
-    Seq.concat [ Seq.ofList authEndpoints; Seq.ofList statusEndpoints; featureEndpoints ]
+    // Test-only helpers, available in Development only (like the Scalar docs below) so they can
+    // never be reached against real data.
+    let testEndpoints =
+        if app.Environment.IsDevelopment () then
+            [ DELETE [ ResetUserData.endpoint queryContext ] ] |> withAuth
+        else
+            Seq.empty
+
+    Seq.concat [
+        Seq.ofList authEndpoints
+        Seq.ofList statusEndpoints
+        featureEndpoints
+        testEndpoints
+    ]
 
 let private configureBuilder (builder : WebApplicationBuilder) (config : AppConfig) : unit =
     let isDevelopment = builder.Environment.IsDevelopment ()

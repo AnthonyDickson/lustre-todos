@@ -45,6 +45,8 @@
     <Compile Include="Feature/Todo/DeleteCompletedTodos.fs" />
     <Compile Include="Feature/Todo/TodoEndpoints.fs" />
 
+    <Compile Include="Feature/TestSupport/ResetUserData.fs" />
+
     <Compile Include="Program.fs" />
   </ItemGroup>
 

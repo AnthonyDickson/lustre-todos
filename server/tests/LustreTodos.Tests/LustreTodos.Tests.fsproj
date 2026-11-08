@@ -11,6 +11,7 @@
     <Compile Include="TestApp.fs" />
     <Compile Include="TestHttp.fs" />
     <Compile Include="Auth/ReturnUrlTests.fs" />
+    <Compile Include="TestSupport/ResetUserDataTests.fs" />
     <Compile Include="Todo/EndpointTests.fs" />
   </ItemGroup>
 

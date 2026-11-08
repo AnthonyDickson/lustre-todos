@@ -32,6 +32,7 @@ type TestAppConfig = {
 module TestAppConfig =
     open LustreTodos.Data.Db
     open LustreTodos.Feature.Todo
+    open LustreTodos.Feature.TestSupport
 
     let empty = { EndpointProviders = [] }
 
@@ -44,6 +45,9 @@ module TestAppConfig =
         }
 
     let withTodos = withEndpoints TodoEndpoints.all
+
+    let withResetUserData =
+        withEndpoints (fun queryContext -> [ DELETE [ ResetUserData.endpoint queryContext ] ])
 
 type TestApp = {
     Client : HttpClient
