@@ -15,7 +15,6 @@ import lustre_todos/shared/effect
 import lustre_todos/shared/guard
 import lustre_todos/shared/out_msg.{type OutMsg}
 import lustre_todos/shared/response
-import lustre_todos/shared/toast
 import lustre_todos/todo_page/todo_item
 import youid/uuid
 
@@ -123,14 +122,12 @@ fn create_toast(model: Model, action: TodoAction) -> Option(out_msg.OutMsg) {
             True -> "completed"
             False -> "not completed"
           }
-          Some(out_msg.PageRequestedToast(
-            title: "Could not sync changes",
-            body: "Reverted the todo status from '"
+          Some(out_msg.error_toast(
+            "Could not sync changes",
+            "Reverted the todo status from '"
               <> item.title
               <> "' to "
               <> state_text,
-            level: toast.Error,
-            dismiss_after_ms: Some(5000),
           ))
         }
         Error(Nil) -> None
@@ -138,46 +135,36 @@ fn create_toast(model: Model, action: TodoAction) -> Option(out_msg.OutMsg) {
     UpdateTitle(id, previous_title) ->
       case list.find(model.todos, fn(t) { t.id == id }) {
         Ok(item) ->
-          Some(out_msg.PageRequestedToast(
-            title: "Could not sync changes",
-            body: "Reverted the todo title from '"
+          Some(out_msg.error_toast(
+            "Could not sync changes",
+            "Reverted the todo title from '"
               <> item.title
               <> "' to '"
               <> previous_title
               <> "'",
-            level: toast.Error,
-            dismiss_after_ms: Some(5000),
           ))
         Error(Nil) -> None
       }
     Create(id) ->
       case list.find(model.todos, fn(t) { t.id == id }) {
         Ok(item) ->
-          Some(out_msg.PageRequestedToast(
-            title: "Could not sync changes",
-            body: "Reverted the creation of the todo '" <> item.title <> "'",
-            level: toast.Error,
-            dismiss_after_ms: Some(5000),
+          Some(out_msg.error_toast(
+            "Could not sync changes",
+            "Reverted the creation of the todo '" <> item.title <> "'",
           ))
         Error(Nil) -> None
       }
     Delete(previous_todo) ->
-      Some(out_msg.PageRequestedToast(
-        title: "Could not sync changes",
-        body: "Reverted the deletion of the todo '"
-          <> previous_todo.title
-          <> "'",
-        level: toast.Error,
-        dismiss_after_ms: Some(5000),
+      Some(out_msg.error_toast(
+        "Could not sync changes",
+        "Reverted the deletion of the todo '" <> previous_todo.title <> "'",
       ))
     DeleteCompleted(completed_todos) ->
-      Some(out_msg.PageRequestedToast(
-        title: "Could not sync changes",
-        body: "Reverted the deletion of "
+      Some(out_msg.error_toast(
+        "Could not sync changes",
+        "Reverted the deletion of "
           <> int.to_string(completed_todos |> list.length)
           <> " todos",
-        level: toast.Error,
-        dismiss_after_ms: Some(5000),
       ))
   }
 }
@@ -257,12 +244,7 @@ pub fn update(
       let body = "Falling back to local data"
 
       #(model, effect.LogError(api_error.describe(error)), [
-        out_msg.PageRequestedToast(
-          title:,
-          body:,
-          level: toast.Error,
-          dismiss_after_ms: Some(5000),
-        ),
+        out_msg.error_toast(title, body),
       ])
     }
 

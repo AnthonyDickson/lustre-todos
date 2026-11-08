@@ -1,5 +1,5 @@
-import gleam/option.{type Option}
-import lustre_todos/shared/toast.{type ToastLevel}
+import gleam/option.{type Option, Some}
+import lustre_todos/shared/toast.{type ToastLevel, Error, Info}
 
 /// Messages that are sent from child modules to the parent (root) module.
 pub type OutMsg {
@@ -12,5 +12,25 @@ pub type OutMsg {
     body: String,
     level: ToastLevel,
     dismiss_after_ms: Option(Int),
+  )
+}
+
+/// Ask the root app to show an auto-dismissing information toast.
+pub fn info_toast(title: String, body: String) -> OutMsg {
+  PageRequestedToast(
+    title: title,
+    body: body,
+    level: Info,
+    dismiss_after_ms: Some(5000),
+  )
+}
+
+/// Ask the root app to show an auto-dismissing error toast.
+pub fn error_toast(title: String, body: String) -> OutMsg {
+  PageRequestedToast(
+    title: title,
+    body: body,
+    level: Error,
+    dismiss_after_ms: Some(5000),
   )
 }

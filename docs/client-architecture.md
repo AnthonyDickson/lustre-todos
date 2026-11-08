@@ -41,8 +41,9 @@ TodoPageMsg(inner_msg) -> {
 ### App-level concerns: toasts
 
 Toasts are an app-level concern, not a page concern. Pages don't own toast
-state or markup — they emit `out_msg.PageRequestedToast(...)` and the shell
-owns rendering, stacking, and dismissal:
+state or markup — they emit `out_msg.PageRequestedToast(...)` (usually through the
+`out_msg.info_toast` and `error_toast` helpers) and the shell owns rendering,
+stacking, and dismissal:
 
 - **Single placement and style** — the toast stack lives in one place
   (`toast.view_with_container`), so every page gets consistent UI.
