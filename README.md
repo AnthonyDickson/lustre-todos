@@ -9,8 +9,17 @@ and a Gleam/Lustre SPA frontend (Tailwind CSS v4, Vite). This repo is a template
 project. This repo only covers the core patterns and infrastructure, for more
 complete examples see these projects based on this template:
 
-- [Budgeteur](https://github.com/AnthonyDickson/budgeteur-fs) Modals,
-  componentless architecture
+- [Budgeteur](https://github.com/AnthonyDickson/budgeteur-fs), a personal
+  finance tracker. Patterns it adds:
+  - Modal dialogs and forms without stateful components
+    ([form_modal.gleam](https://github.com/AnthonyDickson/budgeteur-fs/blob/main/client/src/budgeteur/shared/form_modal.gleam)).
+  - A design system: colour roles over Catppuccin, light and dark modes, and
+    shared UI components
+    ([styling](https://github.com/AnthonyDickson/budgeteur-fs/blob/main/docs/styling.md),
+    [shared/ui](https://github.com/AnthonyDickson/budgeteur-fs/blob/main/client/src/budgeteur/shared/ui)).
+  - Migration tests, which apply migrations to a database holding an earlier
+    release's data
+    ([MigrationTests.fs](https://github.com/AnthonyDickson/budgeteur-fs/blob/main/server/tests/Budgeteur.Tests/Data/MigrationTests.fs)).
 
 ## Getting Started
 
