@@ -74,5 +74,6 @@ Management — versions in `Directory.Packages.props`.
 - [Deployment](docs/deployment.md)
 - [OpenAPI Schemas](docs/openapi.md)
 - [Production OIDC Setup](docs/prod-oidc-setup.md)
+- [Testing Strategy](docs/testing-strategy.md)
 - [Server Tests](docs/server-tests.md)
 - [E2E Tests](docs/e2e-tests.md)

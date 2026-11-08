@@ -1,6 +1,7 @@
 # Server Tests
 
-Expecto tests in `server/tests/LustreTodos.Tests/`, one folder per slice. Also
+Expecto tests in `server/tests/LustreTodos.Tests/`, one folder per slice. What to
+test and at which layer is decided by [testing-strategy](testing-strategy.md). Also
 see [E2E Tests](e2e-tests.md) for end-to-end Playwright tests.
 
 ## Test host
