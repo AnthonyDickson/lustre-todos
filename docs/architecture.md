@@ -25,8 +25,7 @@ Domain logic is pure and free of I/O:
 
 - **Workflow logic, in its slice.** A slice's own types and rules are pure
   functions in a module of the slice, apart from its handlers. Handlers load
-  data, check ownership, call that logic, write, and map requests and
-  responses.
+  data, check ownership, call that logic, write, and map requests and responses.
 - **The shared model, in `Domain/`.** Domain types used by more than one slice,
   their invariants, and the rules several workflows share. The template has no
   `Domain/` folder yet, because the todo slice is the only consumer of its

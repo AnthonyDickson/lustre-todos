@@ -1,8 +1,9 @@
 # Server Tests
 
-Expecto tests in `server/tests/LustreTodos.Tests/`, one folder per slice. What to
-test and at which layer is decided by [testing-strategy](testing-strategy.md). Also
-see [E2E Tests](e2e-tests.md) for end-to-end Playwright tests.
+Expecto tests in `server/tests/LustreTodos.Tests/`, one folder per slice. What
+to test and at which layer is decided by
+[testing-strategy](testing-strategy.md). Also see [E2E Tests](e2e-tests.md) for
+end-to-end Playwright tests.
 
 ## Test host
 
@@ -12,8 +13,8 @@ built per test from only what the feature under test needs:
 - **In-memory SQLite** with every migration applied, so tests run the real
   schema and constraints, are hermetic, and need no files or network.
 - **The slice's production endpoint list** (e.g. `TodoEndpoints.all`). The tests
-  route the same endpoint values the production host uses, so a route added to
-  a slice is reachable from tests without editing the host.
+  route the same endpoint values the production host uses, so a route added to a
+  slice is reachable from tests without editing the host.
 - **No auth middleware.** Production wraps endpoints in the auth filter, which
   needs the full OIDC setup. The test host skips it and injects a fake user with
   a `sub` claim instead. A request can name a different user against the same

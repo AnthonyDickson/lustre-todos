@@ -62,9 +62,9 @@ changes, update the doc in the same change.
 | `just lint`                | Lint F# with fsharplint + [custom lints](./scripts)   |
 
 Dev environment via Nix: `nix develop` (or `direnv allow`). The justfile is the
-source of truth for the full target list. Quick start: `docker compose -f docker/docker-compose.yml up` (log
-in with `dev`/`dev-password`), or natively `just server-watch` plus
-`just client-watch`. See [README.md](README.md).
+source of truth for the full target list. Quick start: `docker compose -f
+docker/docker-compose.yml up` (log in with `dev`/`dev-password`), or natively
+`just server-watch` plus `just client-watch`. See [README.md](README.md).
 
 ## Design Principles
 
@@ -119,8 +119,8 @@ Each rule is explained in the linked doc.
   [architecture](docs/architecture.md#dependency-rules) and
   [client architecture](docs/client-architecture.md#layout).
 - **User scoping** — every query filters by the user id from the `sub` claim. A
-  slice that skips this leaks data across users; each slice has a test acting
-  as a second user.
+  slice that skips this leaks data across users; each slice has a test acting as
+  a second user.
 - **Errors** — handlers return `Result<unit, DomainError>`; no exceptions escape
   them. Database constraints are checked before writes so violations return
   `400`. See [architecture](docs/architecture.md#errors).
@@ -129,9 +129,8 @@ Each rule is explained in the linked doc.
   mapped at the edges. See [architecture](docs/architecture.md#domain-types).
 - **Dates** — calendar dates and instants are never mixed; instants are UTC. See
   [docs/dates.md](docs/dates.md).
-- **Migrations** — never modify a released migration; `Data/Db.fs` is
-  generated, committed, and never hand-edited. See
-  [docs/database.md](docs/database.md).
+- **Migrations** — never modify a released migration; `Data/Db.fs` is generated,
+  committed, and never hand-edited. See [docs/database.md](docs/database.md).
 - **Pure `update`** — client `update` functions return effects as data; all I/O
   goes through the effect interpreter. See
   [client architecture](docs/client-architecture.md#effect-system).
@@ -154,10 +153,11 @@ Each rule is explained in the linked doc.
 ## Verification & CI
 
 CI runs server tests, client tests, E2E tests, Gleam/F#/dprint format checks,
-fsharplint, the custom lints, and a check that `Db.fs` matches the migrations. Before finishing
-work, run the relevant tests plus `just lint` and `just format`; after schema
-changes run `just db-update` and commit the regenerated `Db.fs`. When a CI check
-fails, its log message names the local command to reproduce it.
+fsharplint, the custom lints, and a check that `Db.fs` matches the migrations.
+Before finishing work, run the relevant tests plus `just lint` and `just
+format`; after schema changes run `just db-update` and commit the regenerated
+`Db.fs`. When a CI check fails, its log message names the local command to
+reproduce it.
 
 ## Gotchas
 

@@ -14,7 +14,9 @@ test.describe('todos', () => {
     await page.press('[data-testid="new-todo-input"]', 'Enter');
 
     await expect(page.locator('[data-testid="todo-item"]')).toHaveCount(1);
-    await expect(page.locator('[data-testid="todo-title"]')).toHaveText('Buy milk');
+    await expect(page.locator('[data-testid="todo-title"]')).toHaveText(
+      'Buy milk',
+    );
   });
 
   test('shows a not found page for an unknown path', async ({ page }) => {

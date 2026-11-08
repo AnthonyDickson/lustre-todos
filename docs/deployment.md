@@ -24,11 +24,11 @@ cat $MY_PAT | docker login ghcr.io -u $(gh api user --jq .login) --password-stdi
 docker push ghcr.io/your-org/lustre-todos:latest
 ```
 
-The multi-stage `docker/Dockerfile` installs Node.js and Gleam, builds the client, then
-publishes the server for musl (`linux-musl-x64`) into Microsoft's `runtime-deps`
-Alpine image, which holds only the native libraries a self-contained .NET app
-needs, plus BusyBox for the healthcheck's `wget`. It runs as the image's non-root
-`app` user (UID 1654).
+The multi-stage `docker/Dockerfile` installs Node.js and Gleam, builds the
+client, then publishes the server for musl (`linux-musl-x64`) into Microsoft's
+`runtime-deps` Alpine image, which holds only the native libraries a
+self-contained .NET app needs, plus BusyBox for the healthcheck's `wget`. It
+runs as the image's non-root `app` user (UID 1654).
 
 The server is built with invariant globalization: it formats with the invariant
 culture and compares strings ordinally, so it does not need ICU, the largest
@@ -41,10 +41,13 @@ smoke tests it (a named volume over `/data`, production settings, waiting for
 not tagged `latest`.
 
 > [!NOTE]
-> When publishing from the CLI, you will need to manually set the "package" (image) to publish and then assign the
-> package to your repo. See the page on [Working with the Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
-> and [Connecting a repository to a package](https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package)
-> Building and pushing the image from a GitHub Workflow will automatically associate the package with the source repo.
+> When publishing from the CLI, you will need to manually set the "package"
+> (image) to publish and then assign the package to your repo. See the page on
+> [Working with the Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
+> and
+> [Connecting a repository to a package](https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package)
+> Building and pushing the image from a GitHub Workflow will automatically
+> associate the package with the source repo.
 
 ### Deploying
 
@@ -65,9 +68,11 @@ Login__ReturnUrl=https://app.example.com/ \
   docker compose -f docker/docker-compose.prod.yml up -d
 ```
 
-> **Note**: `docker/docker-compose.prod.yml` is gitignored. Copy from `docker/docker-compose.prod.example.yml` and customize it.
+> **Note**: `docker/docker-compose.prod.yml` is gitignored. Copy from
+> `docker/docker-compose.prod.example.yml` and customize it.
 
-See [Production OIDC Setup](prod-oidc-setup.md) for the full OIDC configuration guide.
+See [Production OIDC Setup](prod-oidc-setup.md) for the full OIDC configuration
+guide.
 
 ### Database in Production
 
@@ -78,8 +83,8 @@ ConnectionStrings__Default="Data Source=/data/app.db" \
   docker compose -f docker/docker-compose.prod.yml up -d
 ```
 
-Use an absolute path — relative paths resolve to the container's working directory,
-which is ephemeral.
+Use an absolute path — relative paths resolve to the container's working
+directory, which is ephemeral.
 
 > [!WARNING]
 > The container runs as the non-root `app` user (UID 1654). The image creates
@@ -99,7 +104,8 @@ which is ephemeral.
 > systemd.tmpfiles.rules = [ "d /var/lib/my-app 0755 1654 1654 -" ];
 > ```
 >
-> Failure to do this results in `SQLite Error 14: 'unable to open database file'`.
+> Failure to do this results in `SQLite Error 14: 'unable to open database
+> file'`.
 
 ### Sign-in keys
 
@@ -126,14 +132,14 @@ first without falling back.
 
 ## Static Assets
 
-**Client assets** (images, fonts, favicons — anything the SPA references) live in
-`client/public/`. Vite serves them at root in dev and copies them into `dist/`
-on build. They reach the server via `just copy-client-dist`.
+**Client assets** (images, fonts, favicons — anything the SPA references) live
+in `client/public/`. Vite serves them at root in dev and copies them into
+`dist/` on build. They reach the server via `just copy-client-dist`.
 
-**Server-only assets** (e.g. `robots.txt`) live in `server/src/LustreTodos/wwwroot/`.
-The `wwwroot/` directory is gitignored and populated by `copy-client-dist` during
-publish. Persistent server assets should have their source of truth elsewhere
-(e.g. a build step that copies them in).
+**Server-only assets** (e.g. `robots.txt`) live in
+`server/src/LustreTodos/wwwroot/`. The `wwwroot/` directory is gitignored and
+populated by `copy-client-dist` during publish. Persistent server assets should
+have their source of truth elsewhere (e.g. a build step that copies them in).
 
 ## Hosting
 

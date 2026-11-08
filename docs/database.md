@@ -1,9 +1,9 @@
 # Database
 
-SQLite with DbUp migrations and SqlHydra type-safe queries.
-The connection string is `Data Source=app.sqlite3` (relative, resolves to project
-root). Override with `ConnectionStrings__Default` in production — use an
-absolute path like `/data/app.sqlite3`.
+SQLite with DbUp migrations and SqlHydra type-safe queries. The connection
+string is `Data Source=app.sqlite3` (relative, resolves to project root).
+Override with `ConnectionStrings__Default` in production — use an absolute path
+like `/data/app.sqlite3`.
 
 ## Commands
 
@@ -57,9 +57,9 @@ Deletes `app.sqlite3`, re-applies all migrations in order, regenerates `Db.fs`.
   `DATETIME`) in migration SQL column definitions. These aren't real SQLite
   types but influence the generated F# types. See
   [SqlHydra's SqliteDataTypes.fs](https://github.com/JordanMarr/SqlHydra/blob/main/src/SqlHydra.Cli/Sqlite/SqliteDataTypes.fs).
-- **Mapping layer.** Each slice converts between the generated row types and
-  its own types (e.g. the `Todo` mapping in `Feature/Todo/`). DB columns never
-  leak to the API — the mapping layer is the control point.
+- **Mapping layer.** Each slice converts between the generated row types and its
+  own types (e.g. the `Todo` mapping in `Feature/Todo/`). DB columns never leak
+  to the API — the mapping layer is the control point.
 - **Standalone migrations.** `scripts/migrate.fsx` applies migrations without
   building the server. This avoids the chicken-and-egg problem where a schema
   change breaks the build before `Db.fs` is regenerated.
@@ -72,11 +72,11 @@ Deletes `app.sqlite3`, re-applies all migrations in order, regenerates `Db.fs`.
   `Data/Instant.fs`, and JSON carries RFC 3339 strings. See [dates](dates.md).
 - **Constraints are checked before writes.** `Constraints.requireAll` and
   `requireOne` run explicit checks that mirror the schema's integrity
-  constraints, so a violation returns a `400` naming the problem rather than
-  the generic `409`, since SQLite does not always report which column a
-  violation came from. `requireAll` collects every failure into one response.
-  The checks must be kept in step with the schema; the `409` remains as a
-  safety net for a request racing a check and its write.
+  constraints, so a violation returns a `400` naming the problem rather than the
+  generic `409`, since SQLite does not always report which column a violation
+  came from. `requireAll` collects every failure into one response. The checks
+  must be kept in step with the schema; the `409` remains as a safety net for a
+  request racing a check and its write.
 - **Foreign keys are enforced per connection.** SQLite builds without a default
   silently ignore them, so the server adds `Foreign Keys=True` to the configured
   connection string and every connection enforces them. WAL journal mode is set
@@ -101,10 +101,10 @@ by `just db-migrate` to apply migrations without building the server.
 
 ### Error Handling
 
-Handlers and their queries do not catch exceptions. `Endpoint.handler` runs
-each handler and converts what it throws into a `DomainError`: a SQLite
-constraint violation becomes `Conflict` (`409`), any other SQLite error
-`DatabaseError` (`500`), a body over the size limit a validation error (`400`),
-and anything else `UnhandledException` (`500`). Handlers focus on domain logic
-(`Option` → `404`, validation → `400`). A global middleware in `Program.fs`
-remains as a last resort for exceptions outside a handler.
+Handlers and their queries do not catch exceptions. `Endpoint.handler` runs each
+handler and converts what it throws into a `DomainError`: a SQLite constraint
+violation becomes `Conflict` (`409`), any other SQLite error `DatabaseError`
+(`500`), a body over the size limit a validation error (`400`), and anything
+else `UnhandledException` (`500`). Handlers focus on domain logic (`Option` →
+`404`, validation → `400`). A global middleware in `Program.fs` remains as a
+last resort for exceptions outside a handler.

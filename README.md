@@ -4,12 +4,13 @@
 # LustreTodos
 
 A full-stack web app with an F#/Oxpecker backend (SQLite + OIDC auth + OpenAPI)
-and a Gleam/Lustre SPA frontend (Tailwind CSS v4, Vite).
-This repo is a template — fork or clone it, then run `scripts/rename.sh` to adopt it for your own project.
-This repo only covers the core patterns and infrastructure, for more complete examples see these projects based on this template:
+and a Gleam/Lustre SPA frontend (Tailwind CSS v4, Vite). This repo is a template
+— fork or clone it, then run `scripts/rename.sh` to adopt it for your own
+project. This repo only covers the core patterns and infrastructure, for more
+complete examples see these projects based on this template:
 
-- [Budgeteur](https://github.com/AnthonyDickson/budgeteur-fs)
-  Modals, componentless architecture
+- [Budgeteur](https://github.com/AnthonyDickson/budgeteur-fs) Modals,
+  componentless architecture
 
 ## Getting Started
 
@@ -46,20 +47,22 @@ See the [Justfile](./justfile) for all targets.
 
 - **Backend** — Oxpecker on .NET 10 with OIDC auth (cookie + JWT bearer).
   Endpoints live in vertical slices (one folder per feature, one file per
-  operation). SQLite with DbUp
-  migrations and SqlHydra type-safe queries. OpenAPI spec at `/openapi/v1.json`,
-  interactive API docs at `/scalar/v1`. See [Database](docs/database.md).
-- **Frontend** — Gleam/Lustre SPA with nested MVU. A custom `Effect` type
-  keeps `update` pure — all I/O (HTTP, localStorage, navigation) runs through
-  one interpreter. See [Client Architecture](docs/client-architecture.md).
-- **Auth** — Dev OIDC via Authelia (`docker compose -f docker/docker-compose.yml up -d`, test user
-  `dev`/`dev-password`). See [Production OIDC Setup](docs/prod-oidc-setup.md).
+  operation). SQLite with DbUp migrations and SqlHydra type-safe queries.
+  OpenAPI spec at `/openapi/v1.json`, interactive API docs at `/scalar/v1`. See
+  [Database](docs/database.md).
+- **Frontend** — Gleam/Lustre SPA with nested MVU. A custom `Effect` type keeps
+  `update` pure — all I/O (HTTP, localStorage, navigation) runs through one
+  interpreter. See [Client Architecture](docs/client-architecture.md).
+- **Auth** — Dev OIDC via Authelia (`docker compose -f docker/docker-compose.yml
+  up -d`, test user `dev`/`dev-password`). See
+  [Production OIDC Setup](docs/prod-oidc-setup.md).
 - **Testing** — Expecto server tests, gleeunit client unit tests, Playwright E2E
-  tests via Docker Compose. See `docs/server-tests.md`, `docs/client-architecture.md#client-tests`, and `docs/e2e-tests.md`.
-- **Deployment** — Single-file publish (`just publish`) or Docker
-  (`docker build -f docker/Dockerfile .` + `docker compose -f docker/docker-compose.prod.yml up -d`).
-  Intended to be hosted behind a reverse proxy.
-  See [Deployment](docs/deployment.md).
+  tests via Docker Compose. See `docs/server-tests.md`,
+  `docs/client-architecture.md#client-tests`, and `docs/e2e-tests.md`.
+- **Deployment** — Single-file publish (`just publish`) or Docker (`docker build
+  -f docker/Dockerfile .` + `docker compose -f docker/docker-compose.prod.yml up
+  -d`). Intended to be hosted behind a reverse proxy. See
+  [Deployment](docs/deployment.md).
 
 ## Dev Environment
 

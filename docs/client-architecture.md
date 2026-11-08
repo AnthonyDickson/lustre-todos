@@ -21,8 +21,8 @@ effects.
 
 ### App-level concerns: toasts
 
-Toasts are an app-level concern, not a page concern. Pages don't own toast
-state or markup — they emit `out_msg.PageRequestedToast(...)` (usually through the
+Toasts are an app-level concern, not a page concern. Pages don't own toast state
+or markup — they emit `out_msg.PageRequestedToast(...)` (usually through the
 `out_msg.info_toast` and `error_toast` helpers) and the shell owns rendering,
 stacking, and dismissal:
 
@@ -34,16 +34,16 @@ stacking, and dismissal:
   `effect.After(delay, ToastDismissed(id))`; manual dismissal is a single
   `ToastDismissed` message.
 
-The requester still decides what a toast says (`title`, `body`), how severe
-it is (`level: ToastLevel` — `Info`/`Warning`/`Error`, which drives border
-colour and ARIA role), and whether it auto-dismisses (`dismiss_after_ms`).
-The shell only renders.
+The requester still decides what a toast says (`title`, `body`), how severe it
+is (`level: ToastLevel` — `Info`/`Warning`/`Error`, which drives border colour
+and ARIA role), and whether it auto-dismisses (`dismiss_after_ms`). The shell
+only renders.
 
-The cost is wiring: every `OutMsg` variant must be handled in
-`map_out_msg`, and every child `update` returns the extra list. The tradeoff
-pays off for anything that should look and behave identically across the
-app — template consumers signal the shell by adding a variant to
-`shared/out_msg.gleam`, never by rendering their own UI.
+The cost is wiring: every `OutMsg` variant must be handled in `map_out_msg`, and
+every child `update` returns the extra list. The tradeoff pays off for anything
+that should look and behave identically across the app — template consumers
+signal the shell by adding a variant to `shared/out_msg.gleam`, never by
+rendering their own UI.
 
 ## Effect System
 
@@ -77,7 +77,8 @@ fn update_with_effect(model, msg) -> #(Model, lustre_effect.Effect(Msg)) {
 
 ### HTTP Helpers
 
-Thin per-method constructors in `shared/effect.gleam` delegate to `http_effect.send`:
+Thin per-method constructors in `shared/effect.gleam` delegate to
+`http_effect.send`:
 
 ```gleam
 effect.get("/api/todos", callback)
@@ -105,9 +106,9 @@ that must not be left in a shared browser.
 
 ## Guard Helpers
 
-`shared/guard.gleam` provides `use`-compatible early-return for `Option` and `Result`.
-`some` and `ok` take the fallback value; `some_lazy` and `ok_lazy` take a
-function, for a fallback that is costly to build or needs the error:
+`shared/guard.gleam` provides `use`-compatible early-return for `Option` and
+`Result`. `some` and `ok` take the fallback value; `some_lazy` and `ok_lazy`
+take a function, for a fallback that is costly to build or needs the error:
 
 ```gleam
 use value <- guard.some(in: my_option, else_return: fallback)
@@ -116,33 +117,34 @@ use value <- guard.ok_lazy(in: my_result, else_return: fn(e) { handle_error(e) }
 
 ## Routing
 
-No router library — custom navigation effects via browser APIs. `shared/route.gleam`
-is the typed list of routes: `from_string` parses a URL (ignoring its query and
-fragment) and `to_string` builds the links, so paths are written once. An
-unrecognised path is `NotFound`.
+No router library — custom navigation effects via browser APIs.
+`shared/route.gleam` is the typed list of routes: `from_string` parses a URL
+(ignoring its query and fragment) and `to_string` builds the links, so paths are
+written once. An unrecognised path is `NotFound`.
 
-`app.gleam` holds the current page as a `Page` union, one case per page. On a URL
-change it sets the title and either updates the page it is already on (keeping
-its state, e.g. the todo filter changing) or starts the new page with its
-`init`. A page message that arrives after its page has gone is dropped. To add a
-page: add its routes, a `Page` case, a `Msg` wrapper, and a `change_page` arm.
+`app.gleam` holds the current page as a `Page` union, one case per page. On a
+URL change it sets the title and either updates the page it is already on
+(keeping its state, e.g. the todo filter changing) or starts the new page with
+its `init`. A page message that arrives after its page has gone is dropped. To
+add a page: add its routes, a `Page` case, a `Msg` wrapper, and a `change_page`
+arm.
 
 ## Session Expiry
 
 The shell rewrites every HTTP effect so a `401` response dispatches its own
 `SessionExpired` instead of reaching the page. It then redirects to `/login`
-with the current URL as the return URL, so the user comes back to the same
-page. Pages never handle `401` themselves. `/login` and `/logout` are server
-endpoints, not SPA routes (`shared/auth_route.gleam`): views reach them
-through forms or `effect.Redirect`, since the router would catch a link. The
+with the current URL as the return URL, so the user comes back to the same page.
+Pages never handle `401` themselves. `/login` and `/logout` are server
+endpoints, not SPA routes (`shared/auth_route.gleam`): views reach them through
+forms or `effect.Redirect`, since the router would catch a link. The
 `/signed-out` page makes no API request, so it does not send the user straight
 back to the provider.
 
 ## Client Tests
 
-Pure unit tests in `client/test/` using gleeunit. No browser or DOM — tests
-call `update` with a `Model` and `Msg`, then assert the returned `Model` and
-inspect the `Effect` payload.
+Pure unit tests in `client/test/` using gleeunit. No browser or DOM — tests call
+`update` with a `Model` and `Msg`, then assert the returned `Model` and inspect
+the `Effect` payload.
 
 ```bash
 just client-test

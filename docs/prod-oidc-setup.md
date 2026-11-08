@@ -1,8 +1,9 @@
 # Production OIDC Setup
 
 > [!IMPORTANT]
-> The files under `authelia/`, `docker/docker-compose.yml`, and `appsettings.Development.json`
-> are **not used in production**. Configure the server via environment variables.
+> The files under `authelia/`, `docker/docker-compose.yml`, and
+> `appsettings.Development.json` are **not used in production**. Configure the
+> server via environment variables.
 
 ## Overview
 
@@ -44,19 +45,23 @@ the Scalar API docs in production.
 
 ## 1. Deploy an OIDC Provider
 
-Any standards-compliant OIDC provider works — Authelia, Keycloak, Auth0, Authentik, Entra ID, etc.
+Any standards-compliant OIDC provider works — Authelia, Keycloak, Auth0,
+Authentik, Entra ID, etc.
 
 ### Authelia-specific
 
 Adapt the dev config from `authelia/configuration.yml`:
 
-- **Replace TLS certs** under `server.tls` with real certificates (e.g. Let's Encrypt).
-- **Regenerate every secret.** The dev secrets are public. Generate 32-byte hex values:
+- **Replace TLS certs** under `server.tls` with real certificates (e.g. Let's
+  Encrypt).
+- **Regenerate every secret.** The dev secrets are public. Generate 32-byte hex
+  values:
   ```bash
   openssl rand -hex 32
   ```
   Replace: `session.secret`, `storage.encryption_key`,
-  `identity_validation.reset_password.jwt_secret`, `identity_providers.oidc.hmac_secret`.
+  `identity_validation.reset_password.jwt_secret`,
+  `identity_providers.oidc.hmac_secret`.
 - **Regenerate the JWKS key pair:**
   ```bash
   openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
@@ -64,7 +69,8 @@ Adapt the dev config from `authelia/configuration.yml`:
   Paste the private key into `identity_providers.oidc.jwks[].key`.
 - Replace the file-based user backend with LDAP (or another production backend).
 - Set `session.cookies[].domain` to your production domain.
-- Run behind a reverse proxy (nginx, Caddy) that terminates TLS, or configure TLS in Authelia directly.
+- Run behind a reverse proxy (nginx, Caddy) that terminates TLS, or configure
+  TLS in Authelia directly.
 
 ## 2. Register OIDC Clients
 
