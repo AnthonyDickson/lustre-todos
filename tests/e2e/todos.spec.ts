@@ -16,4 +16,10 @@ test.describe('todos', () => {
     await expect(page.locator('[data-testid="todo-item"]')).toHaveCount(1);
     await expect(page.locator('[data-testid="todo-title"]')).toHaveText('Buy milk');
   });
+
+  test('shows a not found page for an unknown path', async ({ page }) => {
+    await page.goto('/no/such/page');
+
+    await expect(page.getByTestId('not-found')).toBeVisible();
+  });
 });

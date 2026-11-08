@@ -15,6 +15,7 @@ import lustre_todos/shared/effect
 import lustre_todos/shared/guard
 import lustre_todos/shared/out_msg.{type OutMsg}
 import lustre_todos/shared/response
+import lustre_todos/shared/route
 import lustre_todos/todo_page/todo_item
 import youid/uuid
 
@@ -223,8 +224,8 @@ fn load_todos_from_store() -> effect.Effect(Msg) {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 
-pub fn init() -> #(Model, effect.Effect(Msg)) {
-  let model = Model(new_todo: "", todos: [], visibility: All, edit_state: None)
+pub fn init(visibility: Visibility) -> #(Model, effect.Effect(Msg)) {
+  let model = Model(new_todo: "", todos: [], visibility:, edit_state: None)
 
   #(model, effect.batch([fetch_todos(), load_todos_from_store()]))
 }
@@ -641,7 +642,7 @@ pub fn view(model: Model) -> Element(Msg) {
               html.div([attribute.class("flex gap-2")], [
                 html.a(
                   [
-                    attribute.href("/"),
+                    attribute.href(route.to_string(route.AllTodos)),
                     attribute.class(visibility_classes(All, model.visibility)),
                     attribute.attribute("data-testid", "filter-all"),
                   ],
@@ -649,7 +650,7 @@ pub fn view(model: Model) -> Element(Msg) {
                 ),
                 html.a(
                   [
-                    attribute.href("/active"),
+                    attribute.href(route.to_string(route.ActiveTodos)),
                     attribute.class(visibility_classes(Active, model.visibility)),
                     attribute.attribute("data-testid", "filter-active"),
                   ],
@@ -657,7 +658,7 @@ pub fn view(model: Model) -> Element(Msg) {
                 ),
                 html.a(
                   [
-                    attribute.href("/completed"),
+                    attribute.href(route.to_string(route.CompletedTodos)),
                     attribute.class(visibility_classes(
                       Completed,
                       model.visibility,

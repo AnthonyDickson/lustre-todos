@@ -1,19 +1,26 @@
 import gleam/list
 import gleam/option.{None, Some}
-import gleam/uri
 import lustre
+import lustre/attribute
 import lustre/effect as lustre_effect
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre_todos/shared/effect
 import lustre_todos/shared/http_effect
 import lustre_todos/shared/out_msg.{type OutMsg}
+import lustre_todos/shared/route
 import lustre_todos/shared/toast.{type Toast}
 import lustre_todos/todo_page/todo_page
 import youid/uuid.{type Uuid}
 
+/// The page the current route shows, with its state.
+pub type Page {
+  TodoPage(todo_page.Model)
+  NotFound
+}
+
 pub type Model {
-  Model(todo_page: todo_page.Model, toasts: List(Toast))
+  Model(page: Page, toasts: List(Toast))
 }
 
 pub type Msg {
@@ -23,27 +30,8 @@ pub type Msg {
   ToastDismissed(id: Uuid)
 }
 
-fn path_to_visibility(path: String) -> todo_page.Visibility {
-  case uri.path_segments(path) {
-    [] -> todo_page.All
-    ["active"] -> todo_page.Active
-    ["completed"] -> todo_page.Completed
-    _ -> todo_page.All
-  }
-}
-
 pub fn init(_flags) -> #(Model, effect.Effect(Msg)) {
-  let #(todo_model, todo_effect) = todo_page.init()
-  let model = Model(todo_page: todo_model, toasts: [])
-
-  let effects =
-    effect.batch([
-      effect.map(todo_effect, TodoPageMsg),
-      effect.init_routing(UrlChanged),
-      effect.set_title("LustreTodos"),
-    ])
-
-  #(model, effects)
+  #(Model(page: NotFound, toasts: []), effect.init_routing(UrlChanged))
 }
 
 fn map_out_msg(
@@ -82,30 +70,67 @@ fn with_out_msgs(
   }
 }
 
+fn update_todo_page(
+  model: Model,
+  page_model: todo_page.Model,
+  msg: todo_page.Msg,
+) -> #(Model, effect.Effect(Msg)) {
+  let #(page_model, page_effect, out_msgs) =
+    todo_page.update_with_storage(page_model, msg)
+  #(
+    Model(..model, page: TodoPage(page_model)),
+    effect.map(page_effect, TodoPageMsg),
+  )
+  |> with_out_msgs(out_msgs)
+}
+
+/// Show the page for `route`. Staying on the todo page keeps its state and only
+/// changes the filter; arriving from another page starts it afresh.
+fn change_page(
+  model: Model,
+  route: route.Route,
+) -> #(Model, effect.Effect(Msg)) {
+  let visibility = case route {
+    route.AllTodos -> Ok(todo_page.All)
+    route.ActiveTodos -> Ok(todo_page.Active)
+    route.CompletedTodos -> Ok(todo_page.Completed)
+    route.NotFound -> Error(Nil)
+  }
+
+  case visibility, model.page {
+    Ok(visibility), TodoPage(page_model) ->
+      update_todo_page(
+        model,
+        page_model,
+        todo_page.UserChangedVisibility(visibility),
+      )
+    Ok(visibility), NotFound -> {
+      let #(page_model, page_effect) = todo_page.init(visibility)
+      #(
+        Model(..model, page: TodoPage(page_model)),
+        effect.map(page_effect, TodoPageMsg),
+      )
+    }
+    Error(Nil), _ -> #(Model(..model, page: NotFound), effect.none())
+  }
+}
+
 pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
   case msg {
     UrlChanged(path) -> {
-      let visibility = path_to_visibility(path)
-      let #(todo_model, todo_effect, out_msgs) =
-        todo_page.update_with_storage(
-          model.todo_page,
-          todo_page.UserChangedVisibility(visibility),
-        )
+      let route = route.from_string(path)
+      let #(model, page_effect) = change_page(model, route)
       #(
-        Model(..model, todo_page: todo_model),
-        effect.map(todo_effect, TodoPageMsg),
+        model,
+        effect.batch([page_effect, effect.set_title(route.title(route))]),
       )
-      |> with_out_msgs(out_msgs)
     }
-    TodoPageMsg(inner_msg) -> {
-      let #(inner_model, inner_effect, out_msgs) =
-        todo_page.update_with_storage(model.todo_page, inner_msg)
-      #(
-        Model(..model, todo_page: inner_model),
-        effect.map(inner_effect, TodoPageMsg),
-      )
-      |> with_out_msgs(out_msgs)
-    }
+    TodoPageMsg(inner_msg) ->
+      case model.page {
+        TodoPage(page_model) -> update_todo_page(model, page_model, inner_msg)
+        // A late response for a page the user has left
+        NotFound -> #(model, effect.none())
+      }
     ToastDismissed(id:) -> {
       let toasts = list.filter(model.toasts, fn(toast) { toast.id != id })
       #(Model(..model, toasts:), effect.none())
@@ -138,10 +163,35 @@ fn with_auth_redirect(
   #(model, wrap_http_requests(effect))
 }
 
+fn not_found_view() -> Element(Msg) {
+  html.main(
+    [
+      attribute.class(
+        "bg-gray-100 h-dvh flex flex-col items-center gap-4 pt-20",
+      ),
+      attribute.attribute("data-testid", "not-found"),
+    ],
+    [
+      html.h1([attribute.class("text-4xl text-gray-500")], [
+        element.text("Page not found"),
+      ]),
+      html.a(
+        [
+          attribute.href(route.to_string(route.AllTodos)),
+          attribute.class("text-rose-400 hover:underline"),
+        ],
+        [element.text("Back to your todos")],
+      ),
+    ],
+  )
+}
+
 pub fn view(model: Model) -> Element(Msg) {
-  let page =
-    todo_page.view(model.todo_page)
-    |> element.map(TodoPageMsg)
+  let page = case model.page {
+    TodoPage(page_model) ->
+      todo_page.view(page_model) |> element.map(TodoPageMsg)
+    NotFound -> not_found_view()
+  }
 
   let toasts = toast.view_with_container(model.toasts, ToastDismissed)
 

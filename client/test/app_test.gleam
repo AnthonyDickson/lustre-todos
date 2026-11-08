@@ -2,6 +2,7 @@ import app
 import gleeunit/should
 import lustre_todos/shared/effect
 import lustre_todos/shared/http_effect
+import lustre_todos/todo_page/todo_page
 
 // ── 401 interception ──────────────────────────────────────────────────────────
 // `wrap_http_requests` rewrites every `HttpRequest` callback so a 401 response
@@ -66,4 +67,34 @@ pub fn passes_through_network_errors_test() {
 
   callback(Error(http_effect.NetworkError("offline")))
   |> should.equal(app.UrlChanged(""))
+}
+
+// ── Routing ───────────────────────────────────────────────────────────────────
+
+pub fn url_change_starts_the_todo_page_with_its_filter_test() {
+  let #(model, _) = app.init(Nil)
+  let #(model, _) = app.update(model, app.UrlChanged("/active"))
+
+  let assert app.TodoPage(page) = model.page
+  page.visibility |> should.equal(todo_page.Active)
+}
+
+pub fn url_change_on_the_todo_page_keeps_its_state_test() {
+  let #(model, _) = app.init(Nil)
+  let #(model, _) = app.update(model, app.UrlChanged("/"))
+  let #(model, _) =
+    app.update(model, app.TodoPageMsg(todo_page.UserChangedNewTodo("Draft")))
+  let #(model, _) = app.update(model, app.UrlChanged("/completed"))
+
+  let assert app.TodoPage(page) = model.page
+  page.visibility |> should.equal(todo_page.Completed)
+  page.new_todo |> should.equal("Draft")
+}
+
+pub fn unknown_url_shows_not_found_test() {
+  let #(model, _) = app.init(Nil)
+  let #(model, _) = app.update(model, app.UrlChanged("/"))
+  let #(model, _) = app.update(model, app.UrlChanged("/no/such/page"))
+
+  model.page |> should.equal(app.NotFound)
 }

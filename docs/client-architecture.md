@@ -118,9 +118,16 @@ use value <- guard.ok_lazy(in: my_result, else_return: fn(e) { handle_error(e) }
 
 ## Routing
 
-No router library — custom navigation effects via browser APIs. URL path
-segments determine visibility: `[]` → All, `["active"]` → Active,
-`["completed"]` → Completed.
+No router library — custom navigation effects via browser APIs. `shared/route.gleam`
+is the typed list of routes: `from_string` parses a URL (ignoring its query and
+fragment) and `to_string` builds the links, so paths are written once. An
+unrecognised path is `NotFound`.
+
+`app.gleam` holds the current page as a `Page` union, one case per page. On a URL
+change it sets the title and either updates the page it is already on (keeping
+its state, e.g. the todo filter changing) or starts the new page with its
+`init`. A page message that arrives after its page has gone is dropped. To add a
+page: add its routes, a `Page` case, a `Msg` wrapper, and a `change_page` arm.
 
 ## Client Tests
 
