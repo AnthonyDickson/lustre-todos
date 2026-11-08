@@ -21,7 +21,7 @@ just e2e-test        # Playwright E2E tests in Docker
 just copy-client-dist # Copy client dist into server wwwroot/
 just publish         # Single-file publish (builds client, copies assets, publishes server)
 just format          # Format F# with fantomas + gleam format
-just lint            # Lint F# with fsharplint
+just lint            # Lint F# with fsharplint, plus slice boundaries and string checks
 ```
 
 ### Publishing
@@ -121,7 +121,7 @@ Each feature is a folder under `Feature/`, with one file per HTTP operation (e.g
 - **Operation modules** — each holds its request type, private queries, `handler`, and an `endpoint` that adds OpenAPI metadata. The `Path` literal is public so tests can build URLs from it.
 - **Domain type and its representations** — `Todo.fs` holds the domain record. Invariants live in refined types such as `TodoTitle`: a single-case union with a private case, built only through `create` (which validates and returns a `Result`) and read through `value`. Requests are primitive records validated through `create`; `TodoResponse` (encode-only) and `TodoCodec` (row mapping) unwrap refined values at the edges, so DB columns never reach the API. Rows are trusted and not re-validated on read.
 - **`<Feature>Endpoints.all`** — the slice's endpoints grouped by HTTP method. `Program.fs` wraps them in the auth filter; the test host routes the same list without it.
-- **Shared modules** — `Shared/` (cross-cutting infrastructure) and `Data/` (generated `Db.fs` and code several slices need). Slices depend on them, never the reverse, and slices never import each other.
+- **Shared modules** — `Shared/` (cross-cutting infrastructure) and `Data/` (generated `Db.fs` and code several slices need). Slices depend on them, never the reverse, and slices never import each other. `just lint` enforces both (`check-architecture`).
 
 Dependencies are passed as function arguments: the `QueryContextFactory` (from `Data/Db.fs`) is created once in `Program.fs` and passed to each endpoint. All queries use SqlHydra computation expressions (`selectTask`, `insertTask`, `updateTask`, `deleteTask`).
 
