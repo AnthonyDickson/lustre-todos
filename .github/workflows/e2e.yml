@@ -51,5 +51,4 @@ jobs:
           name: e2e-results
           path: |
             tests/e2e/test-results/
-            tests/e2e/auth.json
           retention-days: 7

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '../support/fixtures';
 
 test.describe('todos', () => {
   test('shows empty list on first load', async ({ page }) => {

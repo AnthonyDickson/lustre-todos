@@ -3,3 +3,22 @@ users:
     displayname: 'Developer'
     password: '$argon2id$v=19$m=65536,t=3,p=4$RtgDEFWTg25BQiB3kdfD4w$E96d8/QEOtJ+V2wJRG7JBb8pEuEsqw86X49ja+zCI6M'
     email: 'dev@example.com'
+
+  # E2E users, one per Playwright worker (see tests/e2e/support/fixtures.ts).
+  # Password: dev-password
+  e2e-0:
+    displayname: 'E2E 0'
+    password: '$argon2id$v=19$m=65536,t=3,p=4$RtgDEFWTg25BQiB3kdfD4w$E96d8/QEOtJ+V2wJRG7JBb8pEuEsqw86X49ja+zCI6M'
+    email: 'e2e-0@example.com'
+  e2e-1:
+    displayname: 'E2E 1'
+    password: '$argon2id$v=19$m=65536,t=3,p=4$RtgDEFWTg25BQiB3kdfD4w$E96d8/QEOtJ+V2wJRG7JBb8pEuEsqw86X49ja+zCI6M'
+    email: 'e2e-1@example.com'
+  e2e-2:
+    displayname: 'E2E 2'
+    password: '$argon2id$v=19$m=65536,t=3,p=4$RtgDEFWTg25BQiB3kdfD4w$E96d8/QEOtJ+V2wJRG7JBb8pEuEsqw86X49ja+zCI6M'
+    email: 'e2e-2@example.com'
+  e2e-3:
+    displayname: 'E2E 3'
+    password: '$argon2id$v=19$m=65536,t=3,p=4$RtgDEFWTg25BQiB3kdfD4w$E96d8/QEOtJ+V2wJRG7JBb8pEuEsqw86X49ja+zCI6M'
+    email: 'e2e-3@example.com'

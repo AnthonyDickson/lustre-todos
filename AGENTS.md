@@ -100,8 +100,8 @@ client/
         todo_page_test.gleam          # Pure unit tests for update logic
 tests/
   e2e/
-    global-setup.ts                   # OIDC login before test suite
-    todos.spec.ts                     # Playwright test specs
+    support/fixtures.ts               # test + expect: a user per worker, a reset per test
+    specs/                            # Playwright test specs
     playwright.config.ts              # Playwright configuration
 ```
 

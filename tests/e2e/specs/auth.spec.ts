@@ -1,10 +1,14 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '../support/fixtures';
 
 /// The ASP.NET Core auth cookie's default name.
 const sessionCookie = '.AspNetCore.Cookies';
 
 test.describe('auth', () => {
   test('logging out posts to /logout, which clears the session cookie', async ({ page }) => {
+    // Stand in for the provider's logout page, so the worker's provider session,
+    // which later tests log in again through, survives.
+    await page.route('https://127.0.0.1:9091/logout', route => route.fulfill({ body: 'Signed out' }));
+
     await page.goto('/');
     await expect(page.locator('[data-testid="new-todo-input"]')).toBeVisible();
 

@@ -1,41 +1,52 @@
 # E2E Tests
 
-Playwright tests running the full stack in Docker Compose with host networking
-(Authelia → .NET server → Vite client → Playwright).
+Playwright tests in `tests/e2e/`, run against the full stack in Docker Compose
+with host networking (Authelia, server, Vite, Playwright):
 
 ```bash
 just e2e-test
 ```
 
+E2E is the only layer that exercises the client and server together.
+
 The server container restores packages into the bind-mounted `server/`, with
 the container's package paths, so host builds and `just lint` fail with
 "package was not found" afterwards. Run `just server-restore` to fix them.
 
-## Setup
+## Isolation
 
-### Global Auth (`global-setup.ts`)
+Every test is independent of the order tests run in and of what runs in
+parallel. Specs import `test` and `expect` from `support/fixtures.ts`, not from
+`@playwright/test`, to get two layers of isolation:
 
-Logs in once via Authelia before the test suite, saves `auth.json`:
+- **A user per worker.** The server scopes all data by user, so workers logged
+  in as different users never see each other's data in the shared database. Each
+  worker logs in once through the real OIDC flow and reuses the session.
+- **A reset per test.** Before each test, a development-only endpoint
+  (`DELETE /api/test/user-data`) deletes the current user's rows from every
+  table with a `UserId` column. Tables are discovered from the schema, so new
+  tables are covered without changes. Tests in the same worker, and retries,
+  start from no data.
 
-1. Navigate to app → SPA 401 → OIDC redirect → Authelia login
-2. Fill MUI form (`dev` / `dev-password`) using click + pressSequentially
-3. Handle consent screen (first login only)
-4. Wait for redirect back to app, save storage state
+Each test also gets a fresh browser context, so localStorage starts empty. The
+server database is recreated on each run.
 
-### Database
+The E2E users (`e2e-0` to `e2e-3`, password `dev-password`) are defined in
+`authelia/users.yml`. The worker count in `playwright.config.ts` must not exceed
+the number of users; to raise it, add users to both the Authelia config and the
+fixtures.
 
-Server uses `/tmp/todos_e2e.db` (ephemeral, cleared on each startup via
-`rm -f` before `dotnet watch run`). Fresh DB every run.
+A test that would end the provider's session (e.g. following the logout
+redirect to Authelia) must stub that page, since the other tests in its worker
+log in again through that session.
 
-## Test Selectors
+## Conventions
 
-All selectors use `data-testid` attributes from `todo_page.gleam`:
-
-`new-todo-input`, `edit-todo-input`, `todo-item`, `todo-title`,
-`todo-checkbox`, `delete-todo`, `clear-completed`, `todo-count`,
-`filter-all`, `filter-active`, `filter-completed`, `logout`
+- Tests create the data they need; they never depend on data from other tests.
+- Selectors use `data-testid` attributes. Add them to page views when
+  introducing interactive elements.
 
 ## Configuration
 
 `playwright.config.ts`: `ignoreHTTPSErrors: true` (self-signed certs),
-`screenshot: 'on'`, `trace: 'on-first-retry'`, auth via `storageState`.
+`screenshot: 'on'`, `trace: 'on-first-retry'`.
