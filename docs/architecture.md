@@ -110,3 +110,63 @@ not always report which column a violation came from. See
 Every row belongs to one user, identified by the `sub` claim, and every query
 filters by it. A slice that skips the filter leaks data across users, so each
 slice has a test acting as a second user ([server tests](server-tests.md)).
+
+## Auth
+
+Two authentication schemes sit behind a policy scheme that picks one per request
+by the presence of an `Authorization: Bearer` header:
+
+- **Cookie** — the SPA session, from the authorization code flow.
+- **JWT bearer** — the API docs (Scalar), using PKCE. Development only.
+
+Either satisfies the single `authenticated` policy that protects every API
+endpoint. `/login` starts the challenge and returns to the page the client was
+on when its session expired, a local path resolved against the configured return
+URL, which is absolute since the client may be served from another origin. Any
+other return path falls back to the configured URL, so `/login` cannot redirect
+to another site. `/logout` takes a POST, so another site cannot log the user out
+with a link, clears the session cookie, and redirects to the provider's logout
+page when one is configured, otherwise to the client's signed out page. That
+page makes no API request, so it does not send the user straight back to the
+provider; a `401` anywhere else does, so an expired session with a live provider
+session signs back in without a click. Outside development, cookies are secure,
+`HttpOnly`, `SameSite=Lax`, with a one-hour sliding expiry.
+
+Known limits:
+
+- Claims come from the ID token; the userinfo endpoint is not called.
+- Audience validation is off unless audiences are configured, because Authelia
+  access tokens carry no `aud` claim.
+- Authelia 4.39 lacks RP-initiated logout, so the provider session is ended
+  through its logout page rather than the standard end session endpoint.
+
+Provider setup is in [prod-oidc-setup](prod-oidc-setup.md).
+
+## Configuration
+
+Settings are typed sections bound from `appsettings*.json` or environment
+variables (e.g. `Oidc__ClientSecret`). Every section is validated at startup,
+and the server refuses to boot, listing every missing or malformed setting,
+rather than failing on first use.
+
+## Logging
+
+1. **Request-scoped logs.** Handlers append structured entries to a per-request
+   log, emitted as one JSON array when the response completes, so entries for a
+   request stay together instead of interleaving with concurrent requests.
+2. **Global Serilog pipeline.** Startup and unhandled exceptions, as compact
+   JSON on the console; file output is opt-in (`Logging__FilePath`) and rolls
+   over at 10 MB, keeping 10 files. Framework logs below warning are dropped,
+   since the request log already records every request.
+
+## Status endpoint
+
+`GET /api/status` reports the build version, uptime, and database connectivity,
+and returns `503` when the database is unreachable. Container health checks use
+it, so it is unauthenticated.
+
+## Test support
+
+`DELETE /api/test/user-data` deletes the current user's data, for the E2E suite
+to start each test from nothing ([e2e tests](e2e-tests.md)). It is registered in
+Development only, so it cannot be reached against real data.
